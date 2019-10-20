@@ -38,7 +38,6 @@ template<typename T> struct FixedStorage
     //! Adds a new record, returns pointer to the new record in NVRAM or NULL if the record could not be written
     const T* Add(const T& record) const { return Add(&record); }
 
-private:
     const uint32_t pageId;
 };
 
@@ -64,7 +63,6 @@ struct VariableStorage
     //! or an invalid @ref Span if the record could not be written
     Span Add(Span data) const { return Page::AddVar(pageId, data); }
 
-private:
     const uint32_t pageId;
 };
 
@@ -106,9 +104,9 @@ template<typename T> struct FixedKeyStorage
     //! or NULL if the record could not be written
     const T* Replace(ID key, const T& record) const { return Replace(key, &record); }
 
-private:
     const uint32_t pageId;
 
+private:
     static constexpr const T* KeyToPtr(const void* rec) { return rec ? (const T*)((const uint8_t*)rec + 4) : NULL; }
     static constexpr const T* KeyToPtr(const void* rec, ID& key) { return rec ? ({ key = *(const uint32_t*)rec; (const T*)((const uint8_t*)rec + 4); }) : NULL; }
     static constexpr const void* PtrToKey(const T* ptr) { return ptr ? (const uint8_t*)ptr - 4 : NULL; }
@@ -146,9 +144,9 @@ struct VariableKeyStorage
     //! or an invalid @ref Span if the record could not be written
     Span Replace(ID key, Span data) const { return Page::ReplaceVar(pageId, key, data); }
 
-private:
     const uint32_t pageId;
 
+private:
     static constexpr Span DataWithoutKey(Span data) { return data ? Span(data.Pointer() + 4, data.Length() - 4) : data; }
     static constexpr Span DataWithoutKey(Span data, ID& key) { return data ? ({ key = *(const uint32_t*)data; Span(data.Pointer() + 4, data.Length() - 4); }) : data; }
     static constexpr const void* PtrToKey(const void* ptr) { return ptr ? (const uint8_t*)ptr - 4 : NULL; }
@@ -171,9 +169,9 @@ template<typename T> struct FixedUniqueKeyStorage
     //! or NULL if the record could not be written
     const T* Set(ID key, const T& record) const { return Set(key, &record); }
 
-private:
     const uint32_t pageId;
 
+private:
     static constexpr const T* KeyToPtr(const void* rec) { return rec ? (const T*)((const uint8_t*)rec + 4) : NULL; }
 };
 
@@ -188,9 +186,9 @@ struct VariableUniqueKeyStorage
     //! or an invalid @ref Span if the record could not be written
     Span Set(ID key, Span data) const { return Page::ReplaceVar(pageId, key, data); }
 
-private:
     const uint32_t pageId;
 
+private:
     static constexpr Span DataWithoutKey(Span data) { return data ? Span(data.Pointer() + 4, data.Length() - 4) : data; }
 };
 
