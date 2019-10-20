@@ -19,11 +19,7 @@ TEST_CASE("01 Init")
 {
     nvram::Initialize(Span(), true);
 
-    for (UNUSED auto blk: Block::Enumerate())
-    {
-        // there should be no blocks
-        Assert(false);
-    }
+    AssertEqual(0, UsedBlocks().size());
 }
 
 TEST_CASE("02 Block Alloc")
@@ -33,15 +29,8 @@ TEST_CASE("02 Block Alloc")
     auto blk = Block::New();
 
     AssertNotEqual((const Block*)NULL, blk);
-
-    int cnt = 0;
-    for (auto& b: Block::Enumerate())
-    {
-        cnt++;
-        AssertEqual(&b, blk);
-    }
-
-    AssertEqual(1, cnt);
+    AssertEqual(1, UsedBlocks().size());
+    AssertEqual(blk, UsedBlocks().begin());
 }
 
 TEST_CASE("03 Max Alloc")
@@ -56,13 +45,7 @@ TEST_CASE("03 Max Alloc")
     }
 
     AssertEqual((const Block*)NULL, Block::New());
-
-    for (UNUSED auto& b: Block::Enumerate())
-    {
-        cnt--;
-    }
-
-    AssertEqual(0u, cnt);
+    AssertEqual(cnt, UsedBlocks().size());
 }
 
 }

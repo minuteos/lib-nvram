@@ -24,13 +24,15 @@ public:
     //! Returns the @ref Block that contains the page
     const class Block* Block() const { return (const class Block*)((uintptr_t)this & BlockMask); }
 
-    //! Checks if the page contains valid data
-    constexpr bool IsValid() const { return id.IsValid(); }
+    //! Determines if a page is empty
+    constexpr bool IsEmpty() const { return id == ~0u; }
+    //! Determines if a page can be erased
+    constexpr bool IsErasable() const { return id  == 0; }
+    //! Determines if a page is valid
+    constexpr bool IsValid() const { return !IsEmpty() && !IsErasable(); }
+
     //! Gets the sequence number of the page
     constexpr uint16_t Sequence() const { return sequence; }
-
-    //! Checks if the payload section of the page is completely empty
-    bool IsEmpty() const;
 
     //! Returns the first page with the specified ID in no particular order
     static const Page* First(ID id);
@@ -93,13 +95,16 @@ public:
     static Span ReplaceVar(ID page, uint32_t firstWord, Span data) { return ReplaceVarImpl(page, firstWord, data); }
 
     //! Allocates a new page with the specified ID and optional fixed record size
-    static const Page* New(ID id, uint32_t recordSize = 0);
+    static const Page* New(ID id, uint32_t recordSize = 0) { return _manager.NewPage(id, recordSize); }
 
 private:
     ID id;
     uint16_t sequence;          //< page sequence number, wraps around
     uint16_t recordSize;        //< fixed record size, or 0 for variable records each prefixed with its size
     uint8_t data[PagePayload];  //< page payload, expected to contain records
+
+    //! Verifies if the page is completely empty
+    bool CheckEmpty() const;
 
     //! Scans the pages with the specified ID, returning a pair of (Newest, Oldest) page
     static res_pair_t Scan(ID id);
@@ -141,6 +146,8 @@ private:
     static constexpr uint32_t FirstWord(const void* rec) { return ((const uint32_t*)rec)[0]; }
 
     static constexpr res_pair_t OffsetPackedData(res_pair_t data, int offset) { return RES_PAIR_FIRST(data) ? RES_PAIR(RES_PAIR_FIRST(data) + offset, RES_PAIR_SECOND(data) - offset) : data; }
+
+    friend class Manager;
 };
 
 }

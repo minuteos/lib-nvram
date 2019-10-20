@@ -71,4 +71,46 @@ bool Flash::Erase(Span range)
     return true;
 }
 
+async(Flash::ErasePageAsync, const void* ptr)
+async_def()
+{
+    static struct EraseOperation
+    {
+        const void* address;
+        bool active, done;
+
+        bool PreSleep(mono_t t, mono_t sleepTicks)
+        {
+            if (sleepTicks < EMULATED_FLASH_ERASE_TICKS)
+            {
+                return false;
+            }
+
+            Flash::Erase(Span(address, PageSize));
+            __testrunner_time += EMULATED_FLASH_ERASE_TICKS;
+            return done = true;
+        }
+    } op = { 0 };
+
+    ptr = (const void*)((intptr_t)ptr & ~(PageSize - 1));
+
+    if (!await_acquire_sec(op.active, 1, 1))
+    {
+        async_return(false);
+    }
+
+    op.done = false;
+    op.address = ptr;
+    kernel::Scheduler::Current().AddPreSleepCallback(op, &EraseOperation::PreSleep);
+
+    if (!await_signal_sec(op.done, 1))
+    {
+        kernel::Scheduler::Current().RemovePreSleepCallback(op, &EraseOperation::PreSleep);
+    }
+
+    op.active = false;
+    async_return(op.done);
+}
+async_end
+
 }

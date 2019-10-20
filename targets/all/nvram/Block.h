@@ -12,6 +12,7 @@
 #include <base/ID.h>
 
 #include <nvram/Layout.h>
+#include <nvram/Manager.h>
 
 namespace nvram
 {
@@ -23,58 +24,51 @@ public:
     //! The @p ptr is not validated in any way and must point inside a NVRAM block
     ALWAYS_INLINE static const Block* FromPtr(const void* ptr) { return (const Block*)((uintptr_t)ptr & BlockMask); }
     //! Returns a newly formatted NVRAM block, or NULL if no free space found
-    static const Block* New();
+    static const Block* New() { return _manager.NewBlock(); }
 
     //! C++ iterator support - returns pointer to the first @ref Page in the block
     constexpr const class Page* begin() const { return (const class Page*)pages; }
     //! C++ iterator support - returns pointer past the last @ref Page in the block
     constexpr const class Page* end() const { return (const class Page*)padding; }
 
+    //! Gets block generation (erase count)
+    constexpr const uint32_t Generation() const { return generation; }
+    //! Determines if a block is empty
+    constexpr const bool IsEmpty() const { return magic == ~0u; }
+    //! Determines if a block is scheduled to be erased
+    constexpr const bool IsErasable() const { return magic == 0; }
     //! Determines if a block is valid
-    constexpr const bool IsValid() const { return !!generation; }
-
-    struct Enumerator
-    {
-        constexpr Enumerator(const Block* beginAt = s_first)
-            : beginAt(beginAt) {}
-
-        const Block* begin() const { return beginAt; }
-        const Block* end() const { return s_end; }
-
-    private:
-        const Block* const beginAt;
-    };
-
-    //! Iterates over all the blocks or starting at the specified @ref Block.
-    //! Invalid blocks in between are returned, make sure to use @ref IsValid before accessing the contents
-    static constexpr Enumerator Enumerate(const Block* beginAt = s_first) { return Enumerator(beginAt); }
+    constexpr const bool IsValid() const { return !IsEmpty() && !IsErasable(); }
 
 private:
     //! Magic header (first word) of NVRAM pages
     static constexpr uint32_t Magic = ID("NVRM");  // type has to be uint32_t, Clang is unable to process it as constexpr otherwise
+
+    //! Types of pages found in block
+    enum PageFlags
+    {
+        PagesErasable = 1,
+        PagesUsed = 2,
+        PagesFree = 4,
+    };
 
     uint32_t magic;         //< All valid pages must contain the @ref Magic value at offset 0
     uint32_t generation;    //< Number of times this particular Block has been erased
     uint8_t pages[PagesPerBlock][PageSize];
     uint8_t padding[BlockPadding];
 
-    //! Start of the area reserved for NVRAM
-    static const Block* s_start;
-    //! End of the area reserved for NVRAM (not a valid block)
-    static const Block* s_end;
-    //! First block containing any data
-    static const Block* s_first;
-
     //! Sets up the area reserved for NVRAM and scans existing Blocks
     static void Initialize(Span area, bool erase);
 
-    //! Determines if the block or its part is empty
-    bool IsEmpty(const uint32_t* from = NULL) const;
+    //! Checks the contents of the block to determine if it is empty
+    bool CheckEmpty(const uint32_t* from = NULL) const;
+    //! Checks the contents of the block, returning a res_pair_t of (PageFlags, freeCount)
+    res_pair_t CheckPages() const;
     //! Writes the block header with the specified generation (erase count) number
     bool Format(uint32_t generation) const;
 
     friend class Page;
-    friend void Initialize(Span, bool);
+    friend class Manager;
 };
 
 }

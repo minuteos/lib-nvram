@@ -8,6 +8,7 @@
 
 #include <nvram/Page.h>
 #include <nvram/Block.h>
+#include <nvram/Manager.h>
 
 #define MYDBG(...)  DBGCL("nvram", __VA_ARGS__)
 
@@ -20,7 +21,7 @@ namespace nvram
 const Page* Page::FromPtr(const void* ptr)
 {
     uintptr_t firstPageInBlock = ((uintptr_t)ptr & BlockMask) + BlockHeader;
-    ASSERT(firstPageInBlock > (uintptr_t)Block::s_start && firstPageInBlock < (uintptr_t)Block::s_end);
+    ASSERT(firstPageInBlock > (uintptr_t)_manager.Blocks().begin() && firstPageInBlock < (uintptr_t)_manager.Blocks().end());
     return (const Page*)((uintptr_t)ptr - ((uintptr_t)ptr - firstPageInBlock) % PageSize);
 }
 
@@ -40,132 +41,9 @@ int Page::CompareAge(const void* rec1, const void* rec2)
 }
 
 /*!
- * Allocates a new page with the specified ID
- */
-const Page* Page::New(ID id, uint32_t recordSize)
-{
-    uint32_t seq = ~0u;
-    const Page* free = NULL;
-
-    // find all required information (new sequence and placement) in a single pass
-    for (auto& b: Block::Enumerate())
-    {
-        if (!b.IsValid())
-            continue;
-
-        for (auto& p: b)
-        {
-            if (p.id == id)
-            {
-                if (seq == ~0u || OVF_LE((uint16_t)seq, p.sequence))
-                    seq = p.sequence + 1;
-            }
-            else if (!free && p.id == ~0u)
-            {
-                if (!p.IsEmpty())
-                {
-                    // mark the page as bad
-                    MYDBG("Marking corrupted page @ %08X", p);
-                    Flash::ShredWord(&p);
-                }
-                else
-                {
-                    free = &p;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (seq == ~0u)
-        seq = 1;
-
-    uint32_t w0 = (seq & MASK(16)) | (recordSize << 16);
-    for (;;)
-    {
-        if (!free)
-        {
-            // try to format a new block if possible
-            if (auto* pb = Block::New())
-            {
-                free = pb->begin();
-            }
-            else
-            {
-                // cannot allocate now
-                break;
-            }
-        }
-
-        // try to prepare a page
-        if (Flash::WriteWord(&free->sequence, w0) &&
-            Flash::WriteWord((const uint32_t*)&free->id, id))
-        {
-            if (recordSize)
-            {
-                MYDBG("Allocated page %.4s-%d with fixed record size %u @ %08X\n", &id, seq, recordSize, free);
-            }
-            else
-            {
-                MYDBG("Allocated page %.4s-%d with variable record size @ %08X\n", &id, seq, free);
-            }
-
-            return free;	// page is ready
-        }
-
-        // mark the page as bad
-        Flash::ShredWord(free);
-        MYDBG("ERROR - Failed to format page %.4s-%d @ %08X", &id, seq, free);
-
-        for (free++; free != free->Block()->end(); free++)
-        {
-            if (free->IsEmpty())
-                break;
-
-            if (free->id == ~0u)
-            {
-                MYDBG("Marking corrupted page @ %08X", free);
-                Flash::ShredWord(free);
-            }
-        }
-
-        if (free == free->Block()->end())
-        {
-            // this block is full, we need a new one
-            free = NULL;
-            for (auto& b : Block::Enumerate(Block::FromPtr(free) + 1))
-            {
-                if (!b.IsValid())
-                    continue;
-
-                for (auto& p: b)
-                {
-                    if (p.id == ~0u)
-                    {
-                        if (!p.IsEmpty())
-                        {
-                            // mark the page as bad
-                            MYDBG("Marking corrupted page @ %08X", p);
-                            Flash::ShredWord(&p);
-                        }
-                        else
-                        {
-                            free = &p;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return NULL;
-}
-
-/*!
  * Checks if a page is completely empty, that is contains all ones
  */
-bool Page::IsEmpty() const
+bool Page::CheckEmpty() const
 {
     const uint32_t* p = (const uint32_t*)this;
     const uint32_t* e = (const uint32_t*)(this + 1);
@@ -185,8 +63,8 @@ bool Page::IsEmpty() const
  */
 const Page* Page::First(ID id)
 {
-    auto* blk = Block::s_first;
-    return blk == Block::s_end ? NULL : FastEnum(blk, blk->begin(), id);
+    auto* blk = _manager.UsedBlocks().begin();
+    return blk == _manager.UsedBlocks().end() ? NULL : FastEnum(blk, blk->begin(), id);
 }
 
 /*!
@@ -219,7 +97,7 @@ const Page* Page::FastEnum(const nvram::Block* blk, const Page* p, ID id)
         for (;;)
         {
             blk++;
-            if (blk == Block::s_end)
+            if (blk == _manager.UsedBlocks().end())
                 return NULL;
             if (blk->IsValid())
                 break;

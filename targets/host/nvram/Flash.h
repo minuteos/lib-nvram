@@ -10,12 +10,18 @@
 
 #include <base/base.h>
 
+#include <kernel/kernel.h>
+
 #ifndef EMULATED_FLASH_SIZE
 #define EMULATED_FLASH_SIZE     65536
 #endif
 
 #ifndef EMULATED_FLASH_PAGE_SIZE
 #define EMULATED_FLASH_PAGE_SIZE    4096
+#endif
+
+#ifndef EMULATED_FLASH_ERASE_TICKS
+#define EMULATED_FLASH_ERASE_TICKS  MonoFromMilliseconds(20)
 #endif
 
 namespace nvram
@@ -32,6 +38,8 @@ public:
     static bool WriteWord(const void* ptr, uint32_t word);
     static void ShredWord(const void* ptr);
     static bool Erase(Span range);
+
+    static async(ErasePageAsync, const void* ptr);
 };
 
 }

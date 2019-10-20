@@ -33,6 +33,13 @@ constexpr size_t PagesPerBlock = NVRAM_PAGES_PER_BLOCK;
 constexpr size_t PagesPerBlock = BlockSize / 1024;
 #endif
 
+//! Number of pages that are always kept free for allocation
+#ifdef NVRAM_PAGES_KEEPT_FREE
+constexpr size_t PagesKeptFree = NVRAM_PAGES_KEPT_FREE;
+#else
+constexpr size_t PagesKeptFree = 4;
+#endif
+
 //! Size of individual pages
 constexpr size_t PageSize = (BlockSize - BlockHeader) / PagesPerBlock & ~(sizeof(uintptr_t) - 1);
 
