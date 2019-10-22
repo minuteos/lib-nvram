@@ -108,7 +108,13 @@ void Manager::Initialize(Span area, bool erase)
             // verified free block, add to free page pool
             pagesAvailable += PagesPerBlock;
         }
-        else if (!blk->IsErasable())
+        else if (blk->IsErasable())
+        {
+            // block is already scheduled for erase
+            MYDBG("WARNING - Block marked for erase found after reset @ %08X", blk);
+            blocksToErase = true;
+        }
+        else
         {
             // unless marked erasable, there is something wrong with the block (e.g. interrupted erase operation)
             MYDBG("WARNING - Corrupted block @ %08X", blk);
