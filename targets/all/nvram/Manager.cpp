@@ -357,7 +357,7 @@ int Manager::Collect(bool destructive)
 
         if (auto page = collector.collector(collector.key))
         {
-            MYDBG("Page %b @ %08X can be erased", Span::Of(page->id), page);
+            MYDBG("Page %.4s-%d @ %08X can be erased", &page->id, page->sequence, page);
             Flash::ShredWord(&page->id);
             collected++;
             // mark the entire block erasable if it contains only erasable pages
