@@ -63,7 +63,7 @@ private:
     //! Checks the contents of the block to determine if it is empty
     bool CheckEmpty(const uint32_t* from = NULL) const;
     //! Checks the contents of the block, returning a res_pair_t of (PageFlags, freeCount)
-    res_pair_t CheckPages() const;
+    RES_PAIR_DECL_EX(CheckPages, const);
     //! Writes the block header with the specified generation (erase count) number
     bool Format(uint32_t generation) const;
 

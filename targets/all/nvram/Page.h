@@ -107,37 +107,37 @@ private:
     bool CheckEmpty() const;
 
     //! Scans the pages with the specified ID, returning a pair of (Newest, Oldest) page
-    static res_pair_t Scan(ID id);
+    static RES_PAIR_DECL(Scan, ID id);
     //! Scans the pages with the specified ID, returning a pair of (Older, Newer) page relative to the specified sequence number
-    static res_pair_t Scan(ID id, uint16_t seq);
+    static RES_PAIR_DECL(Scan, ID id, uint16_t seq);
     //! Helper for fast page enumeration, looks for the next page with the specified ID
     static const Page* FastEnum(const nvram::Block* b, const Page* p, ID id);
 
-    static res_pair_t FindUnorderedFirstImpl(ID pageId, uint32_t firstWord);
-    static res_pair_t FindUnorderedNextImpl(const uint8_t* rec, uint32_t firstWord);
-    static res_pair_t FindForwardNextImpl(const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (Page::*nextPage)() const);
-    static res_pair_t FindNewestFirstImpl(ID page, uint32_t firstWord);
-    static res_pair_t FindNewestNextImpl(const uint8_t* stop, uint32_t firstWord);
-    static res_pair_t FindNewestNextImpl(const Page* p, const uint8_t* stop, uint32_t firstWord);
-    static res_pair_t FindOldestFirstImpl(ID pageId, uint32_t firstWord);
-    static res_pair_t FindOldestNextImpl(const uint8_t* rec, uint32_t firstWord);
+    static RES_PAIR_DECL(FindUnorderedFirstImpl, ID pageId, uint32_t firstWord);
+    static RES_PAIR_DECL(FindUnorderedNextImpl, const uint8_t* rec, uint32_t firstWord);
+    static RES_PAIR_DECL(FindForwardNextImpl, const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (Page::*nextPage)() const);
+    static RES_PAIR_DECL(FindNewestFirstImpl, ID page, uint32_t firstWord);
+    static RES_PAIR_DECL(FindNewestNextImpl, const uint8_t* stop, uint32_t firstWord);
+    static RES_PAIR_DECL(FindNewestNextImpl, const Page* p, const uint8_t* stop, uint32_t firstWord);
+    static RES_PAIR_DECL(FindOldestFirstImpl, ID pageId, uint32_t firstWord);
+    static RES_PAIR_DECL(FindOldestNextImpl, const uint8_t* rec, uint32_t firstWord);
 
-    static res_pair_t AddFixedImpl(ID page, Span data);
-    static res_pair_t AddFixedImpl(ID page, uint32_t firstWord, Span data);
-    static res_pair_t AddVarImpl(ID page, Span data);
-    static res_pair_t AddVarImpl(ID page, uint32_t firstWord, Span data);
-    static res_pair_t ReplaceFixedImpl(ID page, Span data);
-    static res_pair_t ReplaceFixedImpl(ID page, uint32_t firstWord, Span data);
-    static res_pair_t ReplaceVarImpl(ID page, Span data);
-    static res_pair_t ReplaceVarImpl(ID page, uint32_t firstWord, Span data);
+    static RES_PAIR_DECL(AddFixedImpl, ID page, Span data);
+    static RES_PAIR_DECL(AddFixedImpl, ID page, uint32_t firstWord, Span data);
+    static RES_PAIR_DECL(AddVarImpl, ID page, Span data);
+    static RES_PAIR_DECL(AddVarImpl, ID page, uint32_t firstWord, Span data);
+    static RES_PAIR_DECL(ReplaceFixedImpl, ID page, Span data);
+    static RES_PAIR_DECL(ReplaceFixedImpl, ID page, uint32_t firstWord, Span data);
+    static RES_PAIR_DECL(ReplaceVarImpl, ID page, Span data);
+    static RES_PAIR_DECL(ReplaceVarImpl, ID page, uint32_t firstWord, Span data);
 
     //! Pointer to the start of free space on this page, or NULL if no free space is left
     const uint8_t* FindFree() const;
     //! Compares the relative age of two records
     static int CompareAge(const void* rec1, const void* rec2);
 
-    static res_pair_t AddImpl(ID page, uint32_t firstWord, const void* restOfData, uint32_t totalLengthAndFlags);
-    static res_pair_t ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData, uint32_t totalLengthAndFlags);
+    static RES_PAIR_DECL(AddImpl, ID page, uint32_t firstWord, const void* restOfData, uint32_t totalLengthAndFlags);
+    static RES_PAIR_DECL(ReplaceImpl, ID page, uint32_t firstWord, const void* restOfData, uint32_t totalLengthAndFlags);
 
     static constexpr uint32_t VarGetLen(const void* rec) { return ((const uint32_t*)rec)[-1]; }
     static constexpr uint32_t VarSkipLen(uint32_t payloadLen) { return (payloadLen + 7) & ~3; }
@@ -145,7 +145,7 @@ private:
 
     static constexpr uint32_t FirstWord(const void* rec) { return ((const uint32_t*)rec)[0]; }
 
-    static constexpr res_pair_t OffsetPackedData(res_pair_t data, int offset) { return RES_PAIR_FIRST(data) ? RES_PAIR(RES_PAIR_FIRST(data) + offset, RES_PAIR_SECOND(data) - offset) : data; }
+    static constexpr RES_PAIR_DECL(OffsetPackedData, res_pair_t data, int offset) { return RES_PAIR_FIRST(data) ? RES_PAIR(RES_PAIR_FIRST(data) + offset, RES_PAIR_SECOND(data) - offset) : data; }
 
     friend class Manager;
 };
