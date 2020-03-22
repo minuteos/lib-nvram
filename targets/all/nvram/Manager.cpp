@@ -51,6 +51,7 @@ void Manager::Initialize(Span area, bool erase)
     blkFirst = blkEnd = (const Block*)((uintptr_t)area.end() & BlockMask);
     pagesAvailable = 0;
     collectors.Clear();
+    notifiers.Clear();
     collecting = false;
 
     ASSERT(blkStart < blkEnd);
@@ -423,6 +424,28 @@ async_end
 const Page* CollectorDiscardOldest(void* arg0, ID id)
 {
     return Page::OldestFirst(id);
+}
+
+static void IncrementVersion(unsigned* pVersion, ID pageType)
+{
+    (*pVersion)++;
+}
+
+void Manager::RegisterVersionTracker(ID pageType, unsigned* pVersion)
+{
+    *pVersion = 1;
+    RegisterNotifier(pageType, GetDelegate(&IncrementVersion, pVersion));
+}
+
+void Manager::Notify(ID id)
+{
+    for (auto& notifier : notifiers)
+    {
+        if (notifier.key == id)
+        {
+            notifier.notifier(id);
+        }
+    }
 }
 
 }

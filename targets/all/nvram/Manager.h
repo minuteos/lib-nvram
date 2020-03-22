@@ -20,6 +20,7 @@ class Page;
 class Block;
 
 using CollectorDelegate = Delegate<const Page*, ID>;
+using NotifierDelegate = Delegate<void, ID>;
 
 class Manager
 {
@@ -29,6 +30,12 @@ private:
         ID key;
         unsigned level;
         CollectorDelegate collector;
+    };
+
+    struct PageNotifier
+    {
+        ID key;
+        NotifierDelegate notifier;
     };
 
     //! Start of the area reserved for NVRAM
@@ -45,14 +52,22 @@ private:
     bool blocksToErase;
     //! List of collectors for various page types
     LinkedList<PageCollector> collectors;
+    //! List of notifiers for various page types
+    LinkedList<PageNotifier> notifiers;
 
 public:
     //! Sets up the area reserved for NVRAM
     void Initialize(Span area, bool erase);
     //! Registers a collector with the specified key (usually page type), at the specified level
     void RegisterCollector(ID key, unsigned level, CollectorDelegate collector);
+    //! Registers a change notifier for the specified page type
+    void RegisterNotifier(ID type, NotifierDelegate notifier) { notifiers.Push({ type, notifier }); }
+    //! Registers a version number trackker for the specified page type
+    void RegisterVersionTracker(ID type, unsigned* pVersion);
     //! Runs the collector process if it is not already running
     void RunCollector();
+    //! Notifies that the contents of the specified page type have changed
+    void Notify(ID id);
 
     //! Iterates over all the blocks starting at the specified @ref Block
     //! Invalid blocks in between are returned, make sure to use @ref IsValid before accessing the contents

@@ -32,4 +32,10 @@ inline ArrayIterator<const Block> UsedBlocks() { return _manager.UsedBlocks(); }
 //! Registers a NVRAM collector
 inline void RegisterCollector(ID pageId, unsigned level, CollectorDelegate collector) { _manager.RegisterCollector(pageId, level, collector); }
 
+//! Registers a NVRAM change notifier
+inline void RegisterNotifier(ID pageId, NotifierDelegate notifier) { _manager.RegisterNotifier(pageId, notifier); }
+
+//! Registers a NVRAM page version tracker
+inline void RegisterVersionTracker(ID pageId, unsigned* pVersion) { _manager.RegisterVersionTracker(pageId, pVersion); }
+
 }

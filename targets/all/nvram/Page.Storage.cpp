@@ -153,7 +153,10 @@ res_pair_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData, ui
         if (totalLength <= 4 || Flash::Write(free + 4, Span(restOfData, totalLength - 4)))
         {
             if (Flash::WriteWord(free, firstWord))
+            {
+                _manager.Notify(page);
                 return Span(free, totalLength);
+            }
         }
 
         MYDBG("Failed to write record @ %08X", free);
