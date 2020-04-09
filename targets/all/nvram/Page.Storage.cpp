@@ -201,10 +201,12 @@ res_pair_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData
     }
 
     uint32_t len = totalLengthAndFlags & MASK(16);
+    bool var = GETBIT(totalLengthAndFlags, 31);
 
-    if (rec.Length() >= len && (len <= 4 || !memcmp(restOfData, rec.Pointer() + 4, len - 4)))
+    if ((rec.Length() == len || (!var && rec.Length() > len)) &&
+        (len <= 4 || !memcmp(restOfData, rec.Pointer() + 4, len - 4)))
     {
-        // the record is the same - it might be longer, but we care only about the part that was about to be written
+        // the record is the same - if using fixed size records, it might be longer, but we care only about the part that was about to be written
         MYDBG("Same record already written @ %08X", rec);
         return rec;
     }
