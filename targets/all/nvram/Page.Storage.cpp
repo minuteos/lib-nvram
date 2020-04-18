@@ -227,4 +227,28 @@ res_pair_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData
     return res;
 }
 
+/*!
+ * Deletes all records with the specified key (i.e. firstWords)
+ */
+bool Page::Delete(ID page, uint32_t firstWord)
+{
+    Span rec = FindUnorderedFirst(page, firstWord);
+
+    if (!rec)
+    {
+        // no record exists
+        return false;
+    }
+
+    // delete all matching records before notifying
+    do
+    {
+        MYDBG("Deleting record: %08X", rec.Pointer());
+        Flash::ShredWord(rec);
+    } while ((rec = FindUnorderedNext(rec, firstWord)));
+
+    _manager.Notify(page);
+    return true;
+}
+
 }

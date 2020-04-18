@@ -94,6 +94,10 @@ public:
     //! or an invalid @ref Span if the record could not be stored
     static Span ReplaceVar(ID page, uint32_t firstWord, Span data) { return ReplaceVarImpl(page, firstWord, data); }
 
+    //! Deletes all records with the specified @p firstWord from pages with the specified ID
+    //! @returns a boolean indicating whethere at least one record was deleted
+    static bool Delete(ID page, uint32_t firstWord);
+
     //! Allocates a new page with the specified ID and optional fixed record size
     static const Page* New(ID id, uint32_t recordSize = 0) { return _manager.NewPage(id, recordSize); }
 

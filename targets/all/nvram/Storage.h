@@ -103,6 +103,9 @@ template<typename T> struct FixedKeyStorage
     //! returns a pointer to the new record in NVRAM,
     //! or NULL if the record could not be written
     const T* Replace(ID key, const T& record) const { return Replace(key, &record); }
+    //! Deletes all records with the specified key
+    //! @returns a boolean indicating whethere at least one record was deleted
+    bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
     const uint32_t pageId;
 
@@ -143,6 +146,9 @@ struct VariableKeyStorage
     //! returns a @ref Span representing the new record in NVRAM,
     //! or an invalid @ref Span if the record could not be written
     Span Replace(ID key, Span data) const { return Page::ReplaceVar(pageId, key, data); }
+    //! Deletes all records with the specified key
+    //! @returns a boolean indicating whethere at least one record was deleted
+    bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
     const uint32_t pageId;
 
@@ -168,6 +174,9 @@ template<typename T> struct FixedUniqueKeyStorage
     //! returns a pointer to the new record in NVRAM,
     //! or NULL if the record could not be written
     const T* Set(ID key, const T& record) const { return Set(key, &record); }
+    //! Deletes all records with the specified key
+    //! @returns a boolean indicating whethere at least one record was deleted
+    bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
     const uint32_t pageId;
 
@@ -185,6 +194,9 @@ struct VariableUniqueKeyStorage
     //! returns a @ref Span representing the new record in NVRAM,
     //! or an invalid @ref Span if the record could not be written
     Span Set(ID key, Span data) const { return Page::ReplaceVar(pageId, key, data); }
+    //! Deletes all records with the specified key
+    //! @returns a boolean indicating whethere at least one record was deleted
+    bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
     const uint32_t pageId;
 
