@@ -136,8 +136,25 @@ private:
     //! Compares the relative age of two records
     static int CompareAge(const void* rec1, const void* rec2);
 
-    static RES_PAIR_DECL(AddImpl, ID page, uint32_t firstWord, const void* restOfData, uint32_t totalLengthAndFlags);
-    static RES_PAIR_DECL(ReplaceImpl, ID page, uint32_t firstWord, const void* restOfData, uint32_t totalLengthAndFlags);
+    union LengthAndFlags
+    {
+        uint32_t raw = 0;
+        struct
+        {
+            uint16_t length;
+            uint16_t : 14;
+            bool noNotify : 1;
+            bool var : 1;
+        };
+
+        constexpr LengthAndFlags(uint32_t length)
+            : length(uint16_t(length)) {}
+        constexpr LengthAndFlags(uint32_t length, bool var)
+            : length(uint16_t(length)), var(var) {}
+    };
+
+    static RES_PAIR_DECL(AddImpl, ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
+    static RES_PAIR_DECL(ReplaceImpl, ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
 
     static constexpr uint32_t VarGetLen(const void* rec) { return ((const uint32_t*)rec)[-1]; }
     static constexpr uint32_t VarSkipLen(uint32_t payloadLen) { return (payloadLen + 7) & ~3; }
