@@ -20,7 +20,7 @@ TEST_CASE("01 Init Clean")
     nvram::Initialize(Span(), true);
 
     auto endTime = kernel::Scheduler::Main().Run();
-    AssertEqual(0, endTime);
+    AssertEqual(0u, endTime);
 }
 
 TEST_CASE("02 Init Erase Random Data")
@@ -34,12 +34,12 @@ TEST_CASE("02 Init Erase Random Data")
 
     // let background tasks complete before reinitializing
     auto endTime = kernel::Scheduler::Main().Run();
-    AssertEqual(0, endTime);
+    AssertEqual(0u, endTime);
 
     nvram::Initialize(Span());  // second init without erase
 
     endTime = kernel::Scheduler::Main().Run();
-    AssertNotEqual(0, endTime);
+    AssertNotEqual(0u, endTime);
 
     for (auto& b : Blocks())
     {
@@ -69,16 +69,16 @@ TEST_CASE("03 Init Erase Free Blocks")
 
     // let background tasks complete before reinitializing
     auto endTime = kernel::Scheduler::Main().Run();
-    AssertEqual(0, endTime);
+    AssertEqual(0u, endTime);
 
     nvram::Initialize(Span());
 
     endTime = kernel::Scheduler::Main().Run();
-    AssertNotEqual(0, endTime);
+    AssertNotEqual(0u, endTime);
 
     for (auto& b : Blocks())
     {
-        AssertEqual(2, b.Generation());
+        AssertEqual(2u, b.Generation());
     }
 }
 
@@ -100,14 +100,14 @@ TEST_CASE("04 Collect Oldest")
 
     // let background tasks complete before reinitializing
     auto endTime = kernel::Scheduler::Main().Run();
-    AssertNotEqual(0, endTime);
+    AssertNotEqual(0u, endTime);
 
     // can allocate page
     AssertNotEqual((const Page*)NULL, Page::New("TEST"));
 
     // let background tasks complete before reinitializing
     endTime = kernel::Scheduler::Main().Run();
-    AssertNotEqual(0, endTime);
+    AssertNotEqual(0u, endTime);
 }
 
 }

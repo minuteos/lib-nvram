@@ -19,7 +19,7 @@ TEST_CASE("01 Init")
 {
     nvram::Initialize(Span(), true);
 
-    AssertEqual(0, UsedBlocks().size());
+    AssertEqual(0u, UsedBlocks().size());
 }
 
 TEST_CASE("02 Block Alloc")
