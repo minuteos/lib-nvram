@@ -426,6 +426,32 @@ const Page* CollectorDiscardOldest(void* arg0, ID id)
     return Page::OldestFirst(id);
 }
 
+const Page* CollectorRelocate(void* arg0, ID id)
+{
+    const Page* newest;
+    const Page* oldest;
+
+    Page::Scan(id, oldest, newest);
+    if (oldest == newest)
+    {
+        // less than two pages, no way to relocate anything
+        return NULL;
+    }
+
+    for (; oldest != newest; oldest = oldest->OldestNext())
+    {
+        // try to move records - never move more than half of a page's
+        // usable payload to avoid moving that actually just
+        // copy the entire old page to the new one
+        if (oldest->MoveRecords(newest, PagePayload / 2))
+        {
+            return oldest;
+        }
+    }
+
+    return NULL;
+}
+
 static void IncrementVersion(unsigned* pVersion, ID pageType)
 {
     (*pVersion)++;

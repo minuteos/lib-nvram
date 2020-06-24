@@ -33,6 +33,10 @@ public:
 
     //! Gets the sequence number of the page
     constexpr uint16_t Sequence() const { return sequence; }
+    //! Gets the free bytes on the page
+    uint32_t UnusedBytes() const { auto ptr = FindFree(); return ptr ? data + PagePayload - ptr : 0; }
+    //! Gets the used bytes on the page
+    uint32_t UsedBytes() const;
 
     //! Returns the first page with the specified ID in no particular order
     static const Page* First(ID id);
@@ -46,6 +50,10 @@ public:
     static const Page* OldestFirst(ID id) { return (const Page*)RES_PAIR_SECOND(Scan(id)); }
     //! Returns the next newer page with the same ID
     const Page* OldestNext() const { return (const Page*)RES_PAIR_SECOND(Scan(id, sequence)); }
+    //! Returns the oldest and newest page with the specified ID
+    static void Scan(ID id, const Page*& oldest, const Page*& newest) { auto res = Scan(id); newest = (const Page*)RES_PAIR_FIRST(res); oldest = (const Page*)RES_PAIR_SECOND(res); }
+    //! Returns the next older and newer page with the same ID
+    void Scan(const Page*& older, const Page*& newer) const { auto res = Scan(id, sequence); newer = (const Page*)RES_PAIR_FIRST(res); older = (const Page*)RES_PAIR_SECOND(res); }
 
     //! Returns the first record on a page with the specified ID and optional matching first word in no particular order
     static Span FindUnorderedFirst(ID page, uint32_t firstWord = 0) { return FindUnorderedFirstImpl(page, firstWord); }
@@ -100,6 +108,9 @@ public:
 
     //! Allocates a new page with the specified ID and optional fixed record size
     static const Page* New(ID id, uint32_t recordSize = 0) { return _manager.NewPage(id, recordSize); }
+
+    //! Tries to move all records from the old page to the new one
+    bool MoveRecords(const Page* newPage, size_t limit) const;
 
 private:
     ID id;

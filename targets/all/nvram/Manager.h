@@ -98,4 +98,7 @@ extern Manager _manager;
 //! Simple collector that discards the oldest page, if it exists
 const Page* CollectorDiscardOldest(void* arg0, ID key);
 
+//! Simple collector that moves records from the oldest page to the newest, if they fit
+const Page* CollectorRelocate(void* arg0, ID key);
+
 }

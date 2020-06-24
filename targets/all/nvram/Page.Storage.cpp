@@ -251,4 +251,120 @@ bool Page::Delete(ID page, uint32_t firstWord)
     return true;
 }
 
+/*!
+ * Moves all records from the old page to the new page
+ */
+bool Page::MoveRecords(const Page* p, size_t limit) const
+{
+    ASSERT(p);
+    ASSERT(p->id == id);
+    const uint8_t* free = p->FindFree();
+
+    if (!free)
+    {
+        return false;
+    }
+
+    const uint8_t* freeMax = endof(p->data);
+    if (limit && free + limit < freeMax)
+    {
+        freeMax = free + limit;
+    }
+
+    const uint8_t* testFree = free;
+
+    // first simulate moving the records and start only if they fit
+    for (Span rec = FindForwardNextImpl(this, NULL, 0, NULL); rec; rec = FindForwardNextImpl(this, rec, 0, NULL))
+    {
+        if (p->recordSize)
+        {
+            // if the new page is fixed size, old records must also all be small enough
+            if (testFree + p->recordSize > freeMax || rec.Length() > p->recordSize)
+            {
+                return false;
+            }
+            testFree += p->recordSize;
+        }
+        else
+        {
+            uint32_t requiredLength = (rec.Length() + 3) & ~3;
+            if (testFree + requiredLength > freeMax)
+            {
+                return false;
+            }
+            // include the space for the length of the next record
+            testFree += 4 + requiredLength;
+        }
+    }
+
+    // records should fit, move them
+    int moved = 0;
+    bool success = true;
+
+    for (Span rec = FindForwardNextImpl(this, NULL, 0, NULL); rec; rec = FindForwardNextImpl(this, rec, 0, NULL))
+    {
+        for (;;)
+        {
+            if (p->recordSize)
+            {
+                // record size is already validated, just make sure there is still enough free space
+                if (free + p->recordSize > endof(p->data))
+                {
+                    success = false;
+                    goto end;
+                }
+            }
+            else
+            {
+                uint32_t requiredLength = (rec.Length() + 3) & ~3;
+
+                for (;;)
+                {
+                    if (free + requiredLength > endof(p->data))
+                    {
+                        success = false;
+                        goto end;
+                    }
+
+                    // variable records - first reserve space by writing the record length
+                    if (Flash::WriteWord(free - 4, rec.Length()))
+                    {
+                        break;
+                    }
+
+                    MYDBG("Failed to write length for var record @ %08X", free - 4);
+                    Flash::ShredWord(free - 4);
+                    free += 4;	// we can try starting at the next word - since the length is now zero, it will be simply walked over
+                }
+            }
+
+            // the rest is written the same for both record types, with first word written last
+            if (rec.Length() <= 4 || Flash::Write(free + 4, rec.RemoveLeft(4)))
+            {
+                if (Flash::WriteWord(free, rec.Element<uint32_t>()))
+                {
+                    moved++;
+                    Flash::ShredWord(rec);
+                    free += p->recordSize ? p->recordSize : VarSkipLen(rec.Length());
+                    break;
+                }
+            }
+
+            MYDBG("Failed to write record @ %08X", free);
+            Flash::ShredWord(free);
+            free += p->recordSize ? p->recordSize : VarSkipLen(rec.Length());
+        }
+    }
+end:
+    if (moved)
+    {
+        MYDBG("Moved %d records from page %.4s-%d @ %08X to page %.4s-%d @ %08X", moved,
+            &id, sequence, this,
+            &p->id, p->sequence, p);
+        _manager.Notify(id);
+    }
+
+    return success;
+}
+
 }

@@ -103,7 +103,7 @@ res_pair_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint32_t
 
         // try the next page
         rec = NULL;
-    } while ((p = (p->*nextPage)()));
+    } while ((p = nextPage ? (p->*nextPage)() : NULL));
 
     return Span();
 }
