@@ -83,6 +83,8 @@ public:
     const Block* NewBlock();
     //! Returns a newly formatted NVRAM page, or NULL if no free space found
     const Page* NewPage(ID id, uint32_t recordSize);
+    //! Erases all NVRAM pages with the specified ID
+    size_t EraseAll(ID id);
 
 private:
     //! The main collector task

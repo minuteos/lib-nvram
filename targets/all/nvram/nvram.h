@@ -38,4 +38,7 @@ inline void RegisterNotifier(ID pageId, NotifierDelegate notifier) { _manager.Re
 //! Registers a NVRAM page version tracker
 inline void RegisterVersionTracker(ID pageId, unsigned* pVersion) { _manager.RegisterVersionTracker(pageId, pVersion); }
 
+//! Erases all NVRAM pages with the specified ID
+inline void EraseAll(ID pageId) { _manager.EraseAll(pageId); }
+
 }

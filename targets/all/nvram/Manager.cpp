@@ -474,4 +474,21 @@ void Manager::Notify(ID id)
     }
 }
 
+size_t Manager::EraseAll(ID id)
+{
+    size_t count = 0;
+    for (auto page = Page::First(id); page; page = Page::FastEnum(page->Block(), page + 1, id))
+    {
+        Flash::ShredWord(page);
+        count++;
+    }
+
+    if (count)
+    {
+        RunCollector();
+    }
+
+    return count;
+}
+
 }
