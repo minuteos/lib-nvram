@@ -35,7 +35,7 @@ Setting* Settings::GetNotifySetting()
 
 bool Settings::IsCurrentVersion(uint16_t& ver)
 {
-    if (!version)
+    if (version == ~0u)
     {
         return InitVersionTracking(ver);
     }
