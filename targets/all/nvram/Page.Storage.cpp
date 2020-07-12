@@ -221,8 +221,9 @@ res_pair_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData
     {
         // delete the previous record if the new one has been written successfully
         Flash::ShredWord(rec);
-        _manager.Notify(page);
     }
+
+    _manager.Notify(page);
 
     return res;
 }
