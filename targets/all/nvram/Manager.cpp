@@ -8,6 +8,10 @@
 
 #include <nvram/nvram.h>
 
+#if Tcortex_m
+#include <ld_symbols.h>
+#endif
+
 #define MYDBG(...)  DBGCL("nvram", __VA_ARGS__)
 
 namespace nvram
@@ -55,6 +59,14 @@ void Manager::Initialize(Span area, bool erase)
     collecting = false;
 
     ASSERT(blkStart < blkEnd);
+
+#if TRACE && Tcortex_m
+    if ((const char*)blkStart < &__data_load_end)
+    {
+        MYDBG("ERROR: image overlaps NVRAM area (%p > %p) - modify NVRAM_RESERVED_START(_FRACTION)", &__data_load_end, blkStart);
+        ASSERT(false);
+    }
+#endif
 
     if (erase)
     {
