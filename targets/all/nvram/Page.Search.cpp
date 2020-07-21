@@ -108,7 +108,21 @@ res_pair_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint32_t
     return Span();
 }
 
+/*!
+ * Returns the first valid record on the specified page
+ */
+res_pair_t Page::FirstRecordImpl(const Page* p)
+{
+    return FindForwardNextImpl(p, NULL, 0, NULL);
+}
 
+/*!
+ * Returns the next valid record on the same page
+ */
+res_pair_t Page::NextRecordImpl(const uint8_t* record)
+{
+    return FindForwardNextImpl(FromPtrInline(record), record, 0, NULL);
+}
 
 /**************************************************/
 /*************** NEW-TO-OLD SEARCH ****************/

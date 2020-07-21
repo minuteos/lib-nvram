@@ -112,6 +112,53 @@ public:
     //! Tries to move all records from the old page to the new one
     bool MoveRecords(const Page* newPage, size_t limit) const;
 
+    //! Enumerates the pages with the specified ID from oldest to newest
+    class EnumerateOldestFirst
+    {
+    public:
+        constexpr EnumerateOldestFirst(ID id) : id(id) {}
+
+        class Iterator
+        {
+        public:
+            constexpr bool operator !=(Iterator other) const { return page != other.page; }
+            Iterator& operator ++() { page = page->OldestNext(); return *this; }
+            constexpr const Page* operator *() const { return page; }
+
+        private:
+            const Page* page;
+
+            constexpr Iterator(const Page* page) : page(page) {}
+
+            friend class EnumerateOldestFirst;
+        };
+
+        Iterator begin() const { return Iterator(OldestFirst(id)); }
+        Iterator end() const { return Iterator(NULL); }
+
+    private:
+        ID id;
+    };
+
+    class RecordIterator
+    {
+    public:
+        constexpr bool operator !=(RecordIterator other) const { return record.Pointer() != other.record.Pointer(); }
+        RecordIterator& operator ++() { record = NextRecordImpl(record); return *this; }
+        constexpr Span operator *() const { return record; }
+
+    private:
+        Span record;
+
+        constexpr RecordIterator() : record() {}
+        constexpr RecordIterator(Span record) : record(record) {}
+
+        friend class Page;
+    };
+
+    RecordIterator begin() const { return RecordIterator(FirstRecordImpl(this)); }
+    RecordIterator end() const { return RecordIterator(); }
+
 private:
     ID id;
     uint16_t sequence;          //< page sequence number, wraps around
@@ -140,6 +187,8 @@ private:
     static RES_PAIR_DECL(FindNewestNextImpl, const Page* p, const uint8_t* stop, uint32_t firstWord);
     static RES_PAIR_DECL(FindOldestFirstImpl, ID pageId, uint32_t firstWord);
     static RES_PAIR_DECL(FindOldestNextImpl, const uint8_t* rec, uint32_t firstWord);
+    static RES_PAIR_DECL(FirstRecordImpl, const Page* p);
+    static RES_PAIR_DECL(NextRecordImpl, const uint8_t* rec);
 
     static RES_PAIR_DECL(AddFixedImpl, ID page, Span data);
     static RES_PAIR_DECL(AddFixedImpl, ID page, uint32_t firstWord, Span data);
