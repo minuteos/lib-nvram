@@ -41,7 +41,7 @@ public:
     //! Returns the first page with the specified ID in no particular order
     static const Page* First(ID id);
     //! Returns the next page with the same ID in no particular order
-    const Page* Next() const;
+    const Page* Next() const { return UnorderedNextImpl(this); }
     //! Returns the newest page with the specified ID
     static const Page* NewestFirst(ID id) { return (const Page*)RES_PAIR_FIRST(Scan(id)); }
     //! Returns the next older page with the same ID
@@ -121,6 +121,10 @@ private:
     //! Verifies if the page is completely empty
     bool CheckEmpty() const;
 
+    static const Page* UnorderedNextImpl(const Page* after);
+    static const Page* OldestNextImpl(const Page* after);
+    static const Page* NewestNextImpl(const Page* after);
+
     //! Scans the pages with the specified ID, returning a pair of (Newest, Oldest) page
     static RES_PAIR_DECL(Scan, ID id);
     //! Scans the pages with the specified ID, returning a pair of (Older, Newer) page relative to the specified sequence number
@@ -130,7 +134,7 @@ private:
 
     static RES_PAIR_DECL(FindUnorderedFirstImpl, ID pageId, uint32_t firstWord);
     static RES_PAIR_DECL(FindUnorderedNextImpl, const uint8_t* rec, uint32_t firstWord);
-    static RES_PAIR_DECL(FindForwardNextImpl, const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (Page::*nextPage)() const);
+    static RES_PAIR_DECL(FindForwardNextImpl, const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (*nextPage)(const Page*));
     static RES_PAIR_DECL(FindNewestFirstImpl, ID page, uint32_t firstWord);
     static RES_PAIR_DECL(FindNewestNextImpl, const uint8_t* stop, uint32_t firstWord);
     static RES_PAIR_DECL(FindNewestNextImpl, const Page* p, const uint8_t* stop, uint32_t firstWord);
@@ -178,6 +182,13 @@ private:
     static constexpr uint32_t FirstWord(const void* rec) { return ((const uint32_t*)rec)[0]; }
 
     static constexpr RES_PAIR_DECL(OffsetPackedData, res_pair_t data, int offset) { return RES_PAIR_FIRST(data) ? RES_PAIR(RES_PAIR_FIRST(data) + offset, RES_PAIR_SECOND(data) - offset) : data; }
+
+    static RELEASE_ALWAYS_INLINE const Page* FromPtrInline(const void* ptr)
+    {
+        uintptr_t firstPageInBlock = ((uintptr_t)ptr & BlockMask) + BlockHeader;
+        ASSERT(firstPageInBlock > (uintptr_t)_manager.Blocks().begin() && firstPageInBlock < (uintptr_t)_manager.Blocks().end());
+        return (const Page*)((uintptr_t)ptr - ((uintptr_t)ptr - firstPageInBlock) % PageSize);
+    }
 
     friend class Manager;
 };

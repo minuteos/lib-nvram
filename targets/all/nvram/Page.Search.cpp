@@ -26,7 +26,7 @@ res_pair_t Page::FindUnorderedFirstImpl(ID page, uint32_t firstWord)
     const Page* p = First(page);
     if (!p)
         return Span();
-    return FindForwardNextImpl(p, NULL, firstWord, &Page::Next);
+    return FindForwardNextImpl(p, NULL, firstWord, Page::UnorderedNextImpl);
 }
 
 /*!
@@ -36,7 +36,7 @@ res_pair_t Page::FindUnorderedFirstImpl(ID page, uint32_t firstWord)
  */
 res_pair_t Page::FindUnorderedNextImpl(const uint8_t* rec, uint32_t firstWord)
 {
-    return FindForwardNextImpl(FromPtr(rec), rec, firstWord, &Page::Next);
+    return FindForwardNextImpl(FromPtrInline(rec), rec, firstWord, Page::UnorderedNextImpl);
 }
 
 /*!
@@ -44,7 +44,7 @@ res_pair_t Page::FindUnorderedNextImpl(const uint8_t* rec, uint32_t firstWord)
  *
  * Search starts *after* the specified record, or at the start of the page if rec is NULL
  */
-res_pair_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (Page::*nextPage)() const)
+res_pair_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (*nextPage)(const Page*))
 {
     do
     {
@@ -103,7 +103,7 @@ res_pair_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint32_t
 
         // try the next page
         rec = NULL;
-    } while ((p = nextPage ? (p->*nextPage)() : NULL));
+    } while ((p = nextPage ? nextPage(p) : NULL));
 
     return Span();
 }
@@ -131,7 +131,7 @@ res_pair_t Page::FindNewestFirstImpl(ID page, uint32_t firstWord)
  */
 res_pair_t Page::FindNewestNextImpl(const uint8_t* stop, uint32_t firstWord)
 {
-    return FindNewestNextImpl(FromPtr(stop), stop, firstWord);
+    return FindNewestNextImpl(FromPtrInline(stop), stop, firstWord);
 }
 
 /*!
@@ -216,7 +216,7 @@ res_pair_t Page::FindOldestFirstImpl(ID page, uint32_t firstWord)
     const Page* p = OldestFirst(page);
     if (!p)
         return Span();
-    return FindForwardNextImpl(p, NULL, firstWord, &Page::OldestNext);
+    return FindForwardNextImpl(p, NULL, firstWord, Page::OldestNextImpl);
 }
 
 /*!
@@ -224,7 +224,7 @@ res_pair_t Page::FindOldestFirstImpl(ID page, uint32_t firstWord)
  */
 res_pair_t Page::FindOldestNextImpl(const uint8_t* rec, uint32_t firstWord)
 {
-    return FindForwardNextImpl(FromPtr(rec), rec, firstWord, &Page::OldestNext);
+    return FindForwardNextImpl(FromPtrInline(rec), rec, firstWord, Page::OldestNextImpl);
 }
 
 }

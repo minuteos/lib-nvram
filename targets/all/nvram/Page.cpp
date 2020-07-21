@@ -20,9 +20,7 @@ namespace nvram
  */
 const Page* Page::FromPtr(const void* ptr)
 {
-    uintptr_t firstPageInBlock = ((uintptr_t)ptr & BlockMask) + BlockHeader;
-    ASSERT(firstPageInBlock > (uintptr_t)_manager.Blocks().begin() && firstPageInBlock < (uintptr_t)_manager.Blocks().end());
-    return (const Page*)((uintptr_t)ptr - ((uintptr_t)ptr - firstPageInBlock) % PageSize);
+    return FromPtrInline(ptr);
 }
 
 /*!
@@ -30,8 +28,8 @@ const Page* Page::FromPtr(const void* ptr)
  */
 int Page::CompareAge(const void* rec1, const void* rec2)
 {
-    const Page* p1 = FromPtr(rec1);
-    const Page* p2 = FromPtr(rec2);
+    const Page* p1 = FromPtrInline(rec1);
+    const Page* p2 = FromPtrInline(rec2);
 
     if (p1 != p2)
         return OVF_DIFF(p1->sequence, p2->sequence);
@@ -72,9 +70,19 @@ const Page* Page::First(ID id)
  *
  * The pages are returned in an unspecified order
  */
-const Page* Page::Next() const
+const Page* Page::UnorderedNextImpl(const Page* after)
 {
-    return FastEnum(Block(), this + 1, id);
+    return FastEnum(after->Block(), after + 1, after->id);
+}
+
+const Page* Page::OldestNextImpl(const Page* after)
+{
+    return after->OldestNext();
+}
+
+const Page* Page::NewestNextImpl(const Page* after)
+{
+    return after->NewestNext();
 }
 
 /*!
