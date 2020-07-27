@@ -79,6 +79,9 @@ public:
     //! Invalid blocks in between are returned, make sure to use @ref IsValid before accessing the contents
     constexpr ArrayIterator<const Block> UsedBlocks() { return Blocks(blkFirst); }
 
+    //! Returns the number of pages available for allocation
+    constexpr size_t PagesAvailable() const { return pagesAvailable; }
+
     //! Returns a newly formatted NVRAM block, or NULL if no free space found
     const Block* NewBlock();
     //! Returns a newly formatted NVRAM page, or NULL if no free space found

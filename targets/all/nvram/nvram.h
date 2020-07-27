@@ -29,6 +29,9 @@ inline ArrayIterator<const Block> Blocks() { return _manager.Blocks(); }
 //! Enumerates potentially used NVRAM blocks
 inline ArrayIterator<const Block> UsedBlocks() { return _manager.UsedBlocks(); }
 
+//! Gets the number of NVRAM pages free for allocation
+inline size_t PagesAvailable() { return _manager.PagesAvailable(); }
+
 //! Registers a NVRAM collector
 inline void RegisterCollector(ID pageId, unsigned level, CollectorDelegate collector) { _manager.RegisterCollector(pageId, level, collector); }
 
