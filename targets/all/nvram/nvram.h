@@ -21,7 +21,10 @@ namespace nvram
 {
 
 //! Initializes the NVRAM, must be called before any other function working with NVRAM
-inline void Initialize(Span area = Span(), bool reset = false) { _manager.Initialize(area, reset); }
+inline bool Initialize(InitFlags flags = InitFlags::None) { return _manager.Initialize(Span(), flags); }
+
+//! Initializes the NVRAM, must be called before any other function working with NVRAM
+inline bool Initialize(Span area, InitFlags flags = InitFlags::None) { return _manager.Initialize(area, flags); }
 
 //! Enumerates all NVRAM blocks
 inline ArrayIterator<const Block> Blocks() { return _manager.Blocks(); }

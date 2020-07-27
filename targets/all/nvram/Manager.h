@@ -22,6 +22,16 @@ class Block;
 using CollectorDelegate = Delegate<const Page*, ID>;
 using NotifierDelegate = Delegate<void, ID>;
 
+//! NVRAM initialization flags
+enum struct InitFlags
+{
+    None = 0,               //< Performs regular NVRAM init
+    Reset = 1,              //< Reset NVRAM contents during initialization
+    IgnoreCorrupted = 2,    //< Ignore corrupted page (useful for data migration)
+};
+
+DEFINE_FLAG_ENUM(InitFlags);
+
 class Manager
 {
 private:
@@ -57,7 +67,7 @@ private:
 
 public:
     //! Sets up the area reserved for NVRAM
-    void Initialize(Span area, bool erase);
+    bool Initialize(Span area, InitFlags flags);
     //! Registers a collector with the specified key (usually page type), at the specified level
     void RegisterCollector(ID key, unsigned level, CollectorDelegate collector);
     //! Registers a change notifier for the specified page type

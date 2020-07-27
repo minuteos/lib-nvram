@@ -26,12 +26,12 @@ Manager _manager;
  * and not bother with them when doing scans in the future
  *
  * All blocks can be assumed to be in one of three states after initialization is complete,
- * indicated by the first wor
+ * indicated by the first word
  * - valid (magic value)
  * - free (all ones)
  * - erasable (zero) - note that generation field should be still valid or zero
  */
-void Manager::Initialize(Span area, bool erase)
+bool Manager::Initialize(Span area, InitFlags flags)
 {
     if (!area)
     {
@@ -57,6 +57,7 @@ void Manager::Initialize(Span area, bool erase)
     collectors.Clear();
     notifiers.Clear();
     collecting = false;
+    int corrupted = 0;
 
     ASSERT(blkStart < blkEnd);
 
@@ -68,7 +69,7 @@ void Manager::Initialize(Span area, bool erase)
     }
 #endif
 
-    if (erase)
+    if (!!(flags & InitFlags::Reset))
     {
         MYDBG("Erasing NVRAM area %p - %p", area.begin(), area.end());
         Flash::Erase(area);
@@ -127,6 +128,10 @@ void Manager::Initialize(Span area, bool erase)
             MYDBG("WARNING - Block marked for erase found after reset @ %08X", blk);
             blocksToErase = true;
         }
+        else if (!!(flags & InitFlags::IgnoreCorrupted))
+        {
+            corrupted++;
+        }
         else
         {
             // unless marked erasable, there is something wrong with the block (e.g. interrupted erase operation)
@@ -138,8 +143,14 @@ void Manager::Initialize(Span area, bool erase)
     }
 
     MYDBG("Init complete - %08X <= %08X <= %08X", blkStart, blkFirst, blkEnd);
-    MYDBG("  %d/%d pages free (%d/%d bytes)", pagesAvailable, PagesPerBlock * (blkEnd - blkStart),
-        pagesAvailable * PagePayload, (PagesPerBlock * (blkEnd - blkStart)) * PagePayload);
+    MYDBG("  %d/%d pages free (%d/%d bytes)", pagesAvailable, PagesPerBlock * (blkEnd - blkStart - corrupted),
+        pagesAvailable * PagePayload, (PagesPerBlock * (blkEnd - blkStart - corrupted)) * PagePayload);
+
+    if (corrupted)
+    {
+        MYDBG("  %d corrupted pages left unerased", corrupted);
+        return false;
+    }
 
     if (blocksToErase)
     {
@@ -151,6 +162,8 @@ void Manager::Initialize(Span area, bool erase)
         MYDBG("Not enough pages free, running collector");
         RunCollector();
     }
+
+    return true;
 }
 
 const Block* Manager::NewBlock()
