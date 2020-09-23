@@ -117,6 +117,14 @@ res_pair_t Page::FirstRecordImpl(const Page* p)
 }
 
 /*!
+ * Returns the last valid record on the specified page
+ */
+res_pair_t Page::LastRecordImpl(const Page* p)
+{
+    return FindNewestNextImpl(p, NULL, 0, NULL);
+}
+
+/*!
  * Returns the next valid record on the same page
  */
 res_pair_t Page::NextRecordImpl(const uint8_t* record)
@@ -137,7 +145,7 @@ res_pair_t Page::FindNewestFirstImpl(ID page, uint32_t firstWord)
     const Page* p = NewestFirst(page);
     if (!p)
         return Span();
-    return FindNewestNextImpl(p, NULL, firstWord);
+    return FindNewestNextImpl(p, NULL, firstWord, Page::NewestNextImpl);
 }
 
 /*!
@@ -145,13 +153,13 @@ res_pair_t Page::FindNewestFirstImpl(ID page, uint32_t firstWord)
  */
 res_pair_t Page::FindNewestNextImpl(const uint8_t* stop, uint32_t firstWord)
 {
-    return FindNewestNextImpl(FromPtrInline(stop), stop, firstWord);
+    return FindNewestNextImpl(FromPtrInline(stop), stop, firstWord, Page::NewestNextImpl);
 }
 
 /*!
  * Returns the newest matching record, starting on the specified page. Stops searching when it encounters the stop record.
  */
-res_pair_t Page::FindNewestNextImpl(const Page* p, const uint8_t* stop, uint32_t firstWord)
+res_pair_t Page::FindNewestNextImpl(const Page* p, const uint8_t* stop, uint32_t firstWord, const Page* (*nextPage)(const Page*))
 {
     const uint8_t* found = NULL;
 
@@ -210,7 +218,7 @@ res_pair_t Page::FindNewestNextImpl(const Page* p, const uint8_t* stop, uint32_t
         }
 
         // try the next page
-    } while ((p = p->NewestNext()));
+    } while ((p = nextPage ? nextPage(p) : NULL));
 
     return Span();
 }

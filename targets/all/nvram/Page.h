@@ -114,6 +114,11 @@ public:
     //! Tries to move all records from the old page to the new one
     bool MoveRecords(const Page* newPage, size_t limit) const;
 
+    //! Returns the first record on the page
+    Span FirstRecord() const { return FirstRecordImpl(this); }
+    //! Returns the last record on the page
+    Span LastRecord() const { return LastRecordImpl(this); }
+
     //! Enumerates the pages with the specified ID from oldest to newest
     class EnumerateOldestFirst
     {
@@ -186,10 +191,11 @@ private:
     static RES_PAIR_DECL(FindForwardNextImpl, const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (*nextPage)(const Page*));
     static RES_PAIR_DECL(FindNewestFirstImpl, ID page, uint32_t firstWord);
     static RES_PAIR_DECL(FindNewestNextImpl, const uint8_t* stop, uint32_t firstWord);
-    static RES_PAIR_DECL(FindNewestNextImpl, const Page* p, const uint8_t* stop, uint32_t firstWord);
+    static RES_PAIR_DECL(FindNewestNextImpl, const Page* p, const uint8_t* stop, uint32_t firstWord, const Page* (*nextPage)(const Page*));
     static RES_PAIR_DECL(FindOldestFirstImpl, ID pageId, uint32_t firstWord);
     static RES_PAIR_DECL(FindOldestNextImpl, const uint8_t* rec, uint32_t firstWord);
     static RES_PAIR_DECL(FirstRecordImpl, const Page* p);
+    static RES_PAIR_DECL(LastRecordImpl, const Page* p);
     static RES_PAIR_DECL(NextRecordImpl, const uint8_t* rec);
 
     static RES_PAIR_DECL(AddFixedImpl, ID page, Span data);
