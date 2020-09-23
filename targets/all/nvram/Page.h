@@ -32,6 +32,8 @@ public:
     constexpr bool IsValid() const { return !IsEmpty() && !IsErasable(); }
 
     //! Gets the sequence number of the page
+    constexpr ID GetID() const { return id; }
+    //! Gets the sequence number of the page
     constexpr uint16_t Sequence() const { return sequence; }
     //! Gets the free bytes on the page
     uint32_t UnusedBytes() const { auto ptr = FindFree(); return ptr ? data + PagePayload - ptr : 0; }
