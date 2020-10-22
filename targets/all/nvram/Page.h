@@ -147,6 +147,34 @@ public:
         ID id;
     };
 
+    //! Enumerates the pages with the specified ID from newest to oldest
+    class EnumerateNewestFirst
+    {
+    public:
+        constexpr EnumerateNewestFirst(ID id) : id(id) {}
+
+        class Iterator
+        {
+        public:
+            constexpr bool operator !=(Iterator other) const { return page != other.page; }
+            Iterator& operator ++() { page = page->NewestNext(); return *this; }
+            constexpr const Page* operator *() const { return page; }
+
+        private:
+            const Page* page;
+
+            constexpr Iterator(const Page* page) : page(page) {}
+
+            friend class EnumerateNewestFirst;
+        };
+
+        Iterator begin() const { return Iterator(NewestFirst(id)); }
+        Iterator end() const { return Iterator(NULL); }
+
+    private:
+        ID id;
+    };
+
     class RecordIterator
     {
     public:
