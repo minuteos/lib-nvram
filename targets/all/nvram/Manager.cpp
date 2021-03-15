@@ -335,6 +335,14 @@ void Manager::RunCollector()
     }
 }
 
+async(Manager::Collect)
+async_def()
+{
+    RunCollector();
+    await_signal_off(collecting);
+}
+async_end
+
 async(Manager::Collector)
 async_def()
 {

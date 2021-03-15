@@ -76,6 +76,8 @@ public:
     void RegisterVersionTracker(ID type, unsigned* pVersion);
     //! Runs the collector process if it is not already running
     void RunCollector();
+    //! Triggers a collection and waits for it to complete
+    async(Collect);
     //! Notifies that the contents of the specified page type have changed
     void Notify(ID id);
 
