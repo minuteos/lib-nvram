@@ -118,6 +118,8 @@ public:
     Span FirstRecord() const { return FirstRecordImpl(this); }
     //! Returns the last record on the page
     Span LastRecord() const { return LastRecordImpl(this); }
+    //! Returns the full page data span
+    Span PageData() const { return data; }
 
     //! Enumerates the pages with the specified ID from oldest to newest
     class EnumerateOldestFirst
