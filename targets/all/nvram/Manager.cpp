@@ -392,15 +392,8 @@ int Manager::Collect(bool destructive)
         if (auto page = collector.collector(collector.key))
         {
             MYDBG("Page %.4s-%d @ %08X can be erased", &page->id, page->sequence, page);
-            Flash::ShredWord(&page->id);
+            ErasePage(page);
             collected++;
-            // mark the entire block erasable if it contains only erasable pages
-            auto* b = page->Block();
-            if (RES_PAIR_FIRST(page->Block()->CheckPages()) == Block::PagesErasable)
-            {
-                Flash::ShredWord(&b->magic);
-                blocksToErase = true;
-            }
 
             if (collector.level)
             {
@@ -512,7 +505,7 @@ size_t Manager::EraseAll(ID id)
     size_t count = 0;
     for (auto page = Page::First(id); page; page = Page::FastEnum(page->Block(), page + 1, id))
     {
-        Flash::ShredWord(page);
+        ErasePage(page);
         count++;
     }
 
@@ -522,6 +515,19 @@ size_t Manager::EraseAll(ID id)
     }
 
     return count;
+}
+
+void Manager::ErasePage(const Page* page)
+{
+    Flash::ShredWord(&page->id);
+
+    // mark the entire block erasable if it contains only erasable pages
+    auto* b = page->Block();
+    if (RES_PAIR_FIRST(page->Block()->CheckPages()) == Block::PagesErasable)
+    {
+        Flash::ShredWord(&b->magic);
+        blocksToErase = true;
+    }
 }
 
 }

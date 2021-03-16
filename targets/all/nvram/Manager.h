@@ -108,6 +108,8 @@ private:
     int Collect(bool destructive);
     //! Erases all blocks that are marked
     async(EraseBlocks);
+    //! Marks a page (and, if possible, the block that holds it) for erasure
+    void ErasePage(const Page* page);
 };
 
 extern Manager _manager;
