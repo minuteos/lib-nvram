@@ -17,14 +17,14 @@ namespace
 
 TEST_CASE("01 Init")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     AssertEqual(0u, UsedBlocks().size());
 }
 
 TEST_CASE("02 Block Alloc")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     auto blk = Block::New();
 
@@ -35,7 +35,7 @@ TEST_CASE("02 Block Alloc")
 
 TEST_CASE("03 Max Alloc")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     size_t cnt = Flash::GetRange().Length() / Flash::PageSize;
 

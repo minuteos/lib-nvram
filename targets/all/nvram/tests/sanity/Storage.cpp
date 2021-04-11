@@ -17,7 +17,7 @@ namespace
 
 TEST_CASE("01 FixedStorage")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     struct Test { uint8_t a, b; };
     FixedStorage<Test> storage("TEST");
@@ -49,7 +49,7 @@ TEST_CASE("01 FixedStorage")
 
 TEST_CASE("02 VariableStorage")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     VariableStorage storage("TEST");
 
@@ -83,7 +83,7 @@ TEST_CASE("02 VariableStorage")
 
 TEST_CASE("03a FixedKeyStorage - Add")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     struct Test { uint8_t a, b; };
     FixedKeyStorage<Test> storage("TEST");
@@ -135,7 +135,7 @@ TEST_CASE("03a FixedKeyStorage - Add")
 
 TEST_CASE("03b FixedKeyStorage - Replace")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     struct Test { uint8_t a, b; };
     FixedKeyStorage<Test> storage("TEST");
@@ -188,7 +188,7 @@ TEST_CASE("03b FixedKeyStorage - Replace")
 
 TEST_CASE("04a VariableKeyStorage - Add")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     VariableKeyStorage storage("TEST");
 
@@ -239,7 +239,7 @@ TEST_CASE("04a VariableKeyStorage - Add")
 
 TEST_CASE("04b VariableKeyStorage - Replace")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     VariableKeyStorage storage("TEST");
 
@@ -291,7 +291,7 @@ TEST_CASE("04b VariableKeyStorage - Replace")
 
 TEST_CASE("05 FixedUniqueKeyStorage")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     struct Test { int a, b; };
     FixedUniqueKeyStorage<Test> storage("TEST");
@@ -307,7 +307,7 @@ TEST_CASE("05 FixedUniqueKeyStorage")
 
 TEST_CASE("06 VariableUniqueKeyStorage")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     VariableUniqueKeyStorage storage("TEST");
 

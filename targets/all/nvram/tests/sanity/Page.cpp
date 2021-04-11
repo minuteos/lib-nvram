@@ -19,7 +19,7 @@ namespace
 
 TEST_CASE("01 Page Alloc")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     auto page = Page::New("TEST", 0);
 
@@ -29,7 +29,7 @@ TEST_CASE("01 Page Alloc")
 
 TEST_CASE("02 Page Max Alloc")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     size_t cnt = Flash::GetRange().Length() / Flash::PageSize * PagesPerBlock;
 
@@ -45,7 +45,7 @@ TEST_CASE("02 Page Max Alloc")
 
 static int ScatterFill()
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     int last = 0;
     while (auto p = Page::New("TEST", 0))

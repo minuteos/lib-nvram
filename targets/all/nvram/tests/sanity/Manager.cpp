@@ -17,7 +17,7 @@ namespace
 
 TEST_CASE("01 Init Clean")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     auto endTime = kernel::Scheduler::Main().Run();
     AssertEqual(0u, endTime);
@@ -25,7 +25,7 @@ TEST_CASE("01 Init Clean")
 
 TEST_CASE("02 Init Erase Random Data")
 {
-    nvram::Initialize(Span(), true);    // just erase
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);    // just erase
 
     for (auto& b: Blocks())
     {
@@ -49,7 +49,7 @@ TEST_CASE("02 Init Erase Random Data")
 
 TEST_CASE("03 Init Erase Free Blocks")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
 
     for (auto& b: Blocks())
     {
@@ -84,7 +84,7 @@ TEST_CASE("03 Init Erase Free Blocks")
 
 TEST_CASE("04 Collect Oldest")
 {
-    nvram::Initialize(Span(), true);
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
     nvram::RegisterCollector("TEST", 1, CollectorDiscardOldest);
 
     for (auto& b: Blocks())
