@@ -116,6 +116,10 @@ const Page* Page::FastEnum(const nvram::Block* blk, const Page* p, ID id)
 
 /*!
  * Returns packed pointers to the oldest (R1) and newest (R0) page with the specified ID.
+ * Duplicate sequence handling - the oldest page is the one enumerated first,
+ * while the newest one is the one enumerated last
+ * Indeterminate sequence handling - the oldest and newest page sequence is
+ * always determined relative to the first page
  */
 res_pair_t Page::Scan(ID id)
 {
@@ -125,12 +129,18 @@ res_pair_t Page::Scan(ID id)
 
     if (p)
     {
+        // start and end is disambiguated by first page sequence
+        uint16_t seqBase = p->sequence;
         while ((p = p->Next()))
         {
-            if (OVF_GT(oldest->sequence, p->sequence))
+            if (OVF_LT(p->sequence, seqBase) && OVF_LT(p->sequence, oldest->sequence))
+            {
                 oldest = p;
-            if (OVF_LT(newest->sequence, p->sequence))
+            }
+            if (OVF_GE(p->sequence, seqBase) && OVF_GE(p->sequence, newest->sequence))
+            {
                 newest = p;
+            }
         }
     }
 
@@ -138,19 +148,57 @@ res_pair_t Page::Scan(ID id)
 }
 
 /*!
- * Returns pointers to an older and newer page relative to to the provided sequence number.
+ * Returns pointers to an older and newer page relative to to the provided page
+ * Duplicate sequence handling - a page is also considered older if it has
+ * the same sequence, but a lower address, or newer if it has the same sequence
+ * but a higher address
+ * Indeterminate sequence handling - sequence start is disambiguated by the
+ * first page with the specified ID
  */
-res_pair_t Page::Scan(ID id, uint16_t seq)
+res_pair_t Page::Scan(ID id, const Page* relativeTo)
 {
+    const Page* p = First(id);
+    const Page* oldest = p;
+    const Page* newest = p;
     const Page* older = NULL;
     const Page* newer = NULL;
 
-    for (auto* p = First(id); p; p = p->Next())
+    if (p)
     {
-        if (OVF_LT(p->sequence, seq) && (!older || OVF_GT(p->sequence, older->sequence)))
-            older = p;
-        if (OVF_GT(p->sequence, seq) && (!newer || OVF_LT(p->sequence, newer->sequence)))
-            newer = p;
+        // start and end is disambiguated by first page sequence
+        uint16_t seqBase = p->sequence;
+        do
+        {
+            if (OVF_LT(p->sequence, seqBase) && OVF_LT(p->sequence, oldest->sequence))
+            {
+                oldest = p;
+            }
+            if (OVF_GE(p->sequence, seqBase) && OVF_GE(p->sequence, newest->sequence))
+            {
+                newest = p;
+            }
+            if ((p->sequence == relativeTo->sequence && p < relativeTo) ||
+                (OVF_LT(p->sequence, relativeTo->sequence) && (!older || OVF_GE(p->sequence, older->sequence))))
+            {
+                older = p;
+            }
+            if (((p->sequence == relativeTo->sequence && p > relativeTo) || OVF_GT(p->sequence, relativeTo->sequence)) &&
+                (!newer || OVF_LT(p->sequence, newer->sequence)))
+            {
+                newer = p;
+            }
+        }
+        while ((p = p->Next()));
+
+        // discard the found pages if the sequence starts a new loop
+        if (older == newest)
+        {
+            older = NULL;
+        }
+        if (newer == oldest)
+        {
+            newer = NULL;
+        }
     }
 
     return RES_PAIR(older, newer);

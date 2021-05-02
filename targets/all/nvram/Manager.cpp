@@ -200,8 +200,10 @@ const Page* Manager::NewPage(ID id, uint32_t recordSize)
         {
             if (p.id == id)
             {
-                if (seq == ~0u || OVF_LE((uint16_t)seq, p.sequence))
-                    seq = p.sequence + 1;
+                if (seq == ~0u || OVF_LT((uint16_t)seq, p.sequence))
+                {
+                    seq = p.sequence;
+                }
             }
             else if (!free && p.IsEmpty())
             {
@@ -211,8 +213,7 @@ const Page* Manager::NewPage(ID id, uint32_t recordSize)
         }
     }
 
-    if (seq == ~0u)
-        seq = 1;
+    seq = seq == ~0u ? 1 : seq + 1;
 
     uint32_t w0 = (seq & MASK(16)) | (recordSize << 16);
     for (;;)

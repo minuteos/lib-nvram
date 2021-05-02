@@ -47,15 +47,15 @@ public:
     //! Returns the newest page with the specified ID
     static const Page* NewestFirst(ID id) { return (const Page*)RES_PAIR_FIRST(Scan(id)); }
     //! Returns the next older page with the same ID
-    const Page* NewestNext() const { return (const Page*)RES_PAIR_FIRST(Scan(id, sequence)); }
+    const Page* NewestNext() const { return (const Page*)RES_PAIR_FIRST(Scan(id, this)); }
     //! Returns the oldest page with the specified ID
     static const Page* OldestFirst(ID id) { return (const Page*)RES_PAIR_SECOND(Scan(id)); }
     //! Returns the next newer page with the same ID
-    const Page* OldestNext() const { return (const Page*)RES_PAIR_SECOND(Scan(id, sequence)); }
+    const Page* OldestNext() const { return (const Page*)RES_PAIR_SECOND(Scan(id, this)); }
     //! Returns the oldest and newest page with the specified ID
     static void Scan(ID id, const Page*& oldest, const Page*& newest) { auto res = Scan(id); newest = (const Page*)RES_PAIR_FIRST(res); oldest = (const Page*)RES_PAIR_SECOND(res); }
     //! Returns the next older and newer page with the same ID
-    void Scan(const Page*& older, const Page*& newer) const { auto res = Scan(id, sequence); newer = (const Page*)RES_PAIR_FIRST(res); older = (const Page*)RES_PAIR_SECOND(res); }
+    void Scan(const Page*& older, const Page*& newer) const { auto res = Scan(id, this); newer = (const Page*)RES_PAIR_FIRST(res); older = (const Page*)RES_PAIR_SECOND(res); }
 
     //! Returns the first record on a page with the specified ID and optional matching first word in no particular order
     static Span FindUnorderedFirst(ID page, uint32_t firstWord = 0) { return FindUnorderedFirstImpl(page, firstWord); }
@@ -211,8 +211,8 @@ private:
 
     //! Scans the pages with the specified ID, returning a pair of (Newest, Oldest) page
     static RES_PAIR_DECL(Scan, ID id);
-    //! Scans the pages with the specified ID, returning a pair of (Older, Newer) page relative to the specified sequence number
-    static RES_PAIR_DECL(Scan, ID id, uint16_t seq);
+    //! Scans the pages with the specified ID, returning a pair of (Older, Newer) page relative to the specified page
+    static RES_PAIR_DECL(Scan, ID id, const Page* p);
     //! Helper for fast page enumeration, looks for the next page with the specified ID
     static const Page* FastEnum(const nvram::Block* b, const Page* p, ID id);
 
