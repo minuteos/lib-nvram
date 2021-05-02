@@ -389,7 +389,7 @@ int Manager::Collect(bool destructive)
             break;
         }
 
-        if (auto page = collector.collector(collector.key))
+        while (auto page = collector.collector(collector.key))
         {
             MYDBG("Page %.4s-%d @ %08X can be erased", &page->id, page->sequence, page);
             ErasePage(page);
@@ -470,6 +470,24 @@ const Page* CollectorRelocate(void* arg0, ID id)
         // usable payload to avoid moving that actually just
         // copy the entire old page to the new one
         if (oldest->MoveRecords(newest, PagePayload / 2))
+        {
+            return oldest;
+        }
+    }
+
+    return NULL;
+}
+
+const Page* CollectorCleanup(void* arg0, ID id)
+{
+    const Page* newest;
+    const Page* oldest;
+
+    Page::Scan(id, oldest, newest);
+
+    for (; oldest != newest; oldest = oldest->OldestNext())
+    {
+        if (!oldest->FirstRecord())
         {
             return oldest;
         }

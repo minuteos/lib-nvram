@@ -120,4 +120,7 @@ const Page* CollectorDiscardOldest(void* arg0, ID key);
 //! Simple collector that moves records from the oldest page to the newest, if they fit
 const Page* CollectorRelocate(void* arg0, ID key);
 
+//! Simple collector that locates older pages containing no records
+const Page* CollectorCleanup(void* arg0, ID key);
+
 }
