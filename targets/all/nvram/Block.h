@@ -27,9 +27,9 @@ public:
     static const Block* New() { return _manager.NewBlock(); }
 
     //! C++ iterator support - returns pointer to the first @ref Page in the block
-    constexpr const class Page* begin() const { return (const class Page*)pages; }
+    ALWAYS_INLINE const class Page* begin() const { return (const class Page*)pages; }
     //! C++ iterator support - returns pointer past the last @ref Page in the block
-    constexpr const class Page* end() const { return (const class Page*)padding; }
+    ALWAYS_INLINE const class Page* end() const { return (const class Page*)padding; }
 
     //! Gets block generation (erase count)
     constexpr const uint32_t Generation() const { return generation; }
