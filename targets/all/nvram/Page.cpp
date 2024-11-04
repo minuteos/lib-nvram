@@ -121,7 +121,7 @@ const Page* Page::FastEnum(const nvram::Block* blk, const Page* p, ID id)
  * Indeterminate sequence handling - the oldest and newest page sequence is
  * always determined relative to the first page
  */
-res_pair_t Page::Scan(ID id)
+Packed<Page::FirstScanResult> Page::Scan(ID id)
 {
     const Page* p = First(id);
     const Page* oldest = p;
@@ -144,7 +144,7 @@ res_pair_t Page::Scan(ID id)
         }
     }
 
-    return RES_PAIR(newest, oldest);
+    return pack<FirstScanResult>(newest, oldest);
 }
 
 /*!
@@ -155,7 +155,7 @@ res_pair_t Page::Scan(ID id)
  * Indeterminate sequence handling - sequence start is disambiguated by the
  * first page with the specified ID
  */
-res_pair_t Page::Scan(ID id, const Page* relativeTo)
+Packed<Page::NextScanResult> Page::Scan(ID id, const Page* relativeTo)
 {
     const Page* p = First(id);
     const Page* oldest = p;
@@ -201,7 +201,7 @@ res_pair_t Page::Scan(ID id, const Page* relativeTo)
         }
     }
 
-    return RES_PAIR(older, newer);
+    return pack<NextScanResult>(older, newer);
 }
 
 }

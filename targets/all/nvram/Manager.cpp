@@ -104,7 +104,7 @@ bool Manager::Initialize(Span area, InitFlags flags)
             {
                 // scan through pages to see if the block can be erased
                 auto res = blk->CheckPages();
-                if (RES_PAIR_FIRST(res) == Block::PagesErasable)
+                if (res.flags == Block::PagesErasable)
                 {
                     // mark a block with only erasable pages as erasable
                     MYDBG("WARNING - Block with no used nor free pages found after reset @ %08X", blk);
@@ -113,7 +113,7 @@ bool Manager::Initialize(Span area, InitFlags flags)
                 }
                 else
                 {
-                    pagesAvailable += RES_PAIR_SECOND(res);
+                    pagesAvailable += res.freeCount;
                 }
             }
         }
@@ -542,7 +542,7 @@ void Manager::ErasePage(const Page* page)
 
     // mark the entire block erasable if it contains only erasable pages
     auto* b = page->Block();
-    if (RES_PAIR_FIRST(page->Block()->CheckPages()) == Block::PagesErasable)
+    if (page->Block()->CheckPages().flags == Block::PagesErasable)
     {
         Flash::ShredWord(&b->magic);
         blocksToErase = true;

@@ -28,10 +28,10 @@ bool Block::CheckEmpty(const uint32_t* from) const
     return true;
 }
 
-res_pair_t Block::CheckPages() const
+Packed<Block::CheckResult> Block::CheckPagesImpl() const
 {
-    int flags = 0;
-    int freeCount = 0;
+    uint32_t flags = 0;
+    uint32_t freeCount = 0;
 
     for (auto p: *this)
     {
@@ -50,7 +50,7 @@ res_pair_t Block::CheckPages() const
         }
     }
 
-    return RES_PAIR(flags, freeCount);
+    return pack<CheckResult>(flags, freeCount);
 }
 
 bool Block::Format(uint32_t gen) const

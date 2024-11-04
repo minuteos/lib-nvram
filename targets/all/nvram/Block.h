@@ -60,10 +60,17 @@ private:
     //! Sets up the area reserved for NVRAM and scans existing Blocks
     static void Initialize(Span area, bool erase);
 
+    struct CheckResult
+    {
+        uint32_t flags;
+        uint32_t freeCount;
+    };
+
     //! Checks the contents of the block to determine if it is empty
     bool CheckEmpty(const uint32_t* from = NULL) const;
-    //! Checks the contents of the block, returning a res_pair_t of (PageFlags, freeCount)
-    RES_PAIR_DECL_EX(CheckPages, const);
+    //! Checks the contents of the block
+    CheckResult CheckPages() const { return unpack<CheckResult>(CheckPagesImpl()); }
+    Packed<CheckResult> CheckPagesImpl() const;
     //! Writes the block header with the specified generation (erase count) number
     bool Format(uint32_t generation) const;
 

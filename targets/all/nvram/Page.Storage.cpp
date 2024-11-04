@@ -53,7 +53,7 @@ const uint8_t* Page::FindFree() const
  *
  * The returned data points to the entire record including first word, i.e. the same as passed in data.
  */
-res_pair_t Page::AddFixedImpl(ID page, Span data)
+Span::packed_t Page::AddFixedImpl(ID page, Span data)
 {
     ASSERT(data && data.Length());
     const uint32_t* p = data;
@@ -66,7 +66,7 @@ res_pair_t Page::AddFixedImpl(ID page, Span data)
  *
  * The returned data points to the record excluding the first word, i.e. the same as passed in data.
  */
-res_pair_t Page::AddFixedImpl(ID page, uint32_t firstWord, Span data)
+Span::packed_t Page::AddFixedImpl(ID page, uint32_t firstWord, Span data)
 {
     return OffsetPackedData(AddImpl(page, firstWord, data, data.Length() + 4), 4);
 }
@@ -77,7 +77,7 @@ res_pair_t Page::AddFixedImpl(ID page, uint32_t firstWord, Span data)
  *
  * The returned data points to the entire record including first word, i.e. the same as passed in data.
  */
-res_pair_t Page::AddVarImpl(ID page, Span data)
+Span::packed_t Page::AddVarImpl(ID page, Span data)
 {
     ASSERT(data || !data.Length());
     const uint32_t* p = data;
@@ -91,17 +91,17 @@ res_pair_t Page::AddVarImpl(ID page, Span data)
  *
  * The returned data points to the record excluding the first word, i.e. the same as passed in data.
  */
-res_pair_t Page::AddVarImpl(ID page, uint32_t firstWord, Span data)
+Span::packed_t Page::AddVarImpl(ID page, uint32_t firstWord, Span data)
 {
     return OffsetPackedData(AddImpl(page, firstWord, data, LengthAndFlags(data.Length() + 4, true)), 4);
 }
 
-res_pair_t Page::ReplaceFixedImpl(ID page, uint32_t firstWord, Span data)
+Span::packed_t Page::ReplaceFixedImpl(ID page, uint32_t firstWord, Span data)
 {
     return OffsetPackedData(ReplaceImpl(page, firstWord, data, data.Length() + 4), 4);
 }
 
-res_pair_t Page::ReplaceVarImpl(ID page, uint32_t firstWord, Span data)
+Span::packed_t Page::ReplaceVarImpl(ID page, uint32_t firstWord, Span data)
 {
     return OffsetPackedData(ReplaceImpl(page, firstWord, data, LengthAndFlags(data.Length() + 4, true)), 4);
 }
@@ -112,7 +112,7 @@ res_pair_t Page::ReplaceVarImpl(ID page, uint32_t firstWord, Span data)
  * In case the page format is not suitable or verification fails,
  * more attempts are made and new pages are allocated as needed.
  */
-res_pair_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags)
+Span::packed_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags)
 {
     const Page* p = NewestFirst(page);
     const uint8_t* free = p ? p->FindFree() : NULL;
@@ -174,7 +174,7 @@ res_pair_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData, Le
  *
  * If the newest stored instance of the record is the same as the new one provided, it is *not* written again.
  */
-res_pair_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags)
+Span::packed_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags)
 {
     Span rec = FindUnorderedFirst(page, firstWord);
 
@@ -215,9 +215,9 @@ res_pair_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData
     }
 
     totalLengthAndFlags.noNotify = true;    // suppress notification when adding, notify after deleting the previous record
-    res_pair_t res = AddImpl(page, firstWord, restOfData, totalLengthAndFlags);
+    Span res = AddImpl(page, firstWord, restOfData, totalLengthAndFlags);
 
-    if (RES_PAIR_FIRST(res))
+    if (res)
     {
         // delete the previous record if the new one has been written successfully
         Flash::ShredWord(rec);

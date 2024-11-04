@@ -65,12 +65,12 @@ async_def()
 }
 async_end
 
-res_pair_t Setting::GetImpl()
+Span::packed_t Setting::GetImpl()
 {
-    return spec.Owner().IsCurrentVersion(version) ? (res_pair_t)value : Load();
+    return spec.Owner().IsCurrentVersion(version) ? (Span::packed_t)value : Load();
 }
 
-res_pair_t Setting::Load()
+Span::packed_t Setting::Load()
 {
     auto val = spec.Get();
     if (!val || val.Length() < spec.ValueLength())
@@ -84,7 +84,7 @@ res_pair_t Setting::Load()
     return value = val;
 }
 
-res_pair_t Setting::SetImpl(Span value)
+Span::packed_t Setting::SetImpl(Span value)
 {
     return value = spec.Set(value);
 }

@@ -45,17 +45,17 @@ public:
     //! Returns the next page with the same ID in no particular order
     const Page* Next() const { return UnorderedNextImpl(this); }
     //! Returns the newest page with the specified ID
-    static const Page* NewestFirst(ID id) { return (const Page*)RES_PAIR_FIRST(Scan(id)); }
+    static const Page* NewestFirst(ID id) { return unpack<FirstScanResult>(Scan(id)).newest; }
     //! Returns the next older page with the same ID
-    const Page* NewestNext() const { return (const Page*)RES_PAIR_FIRST(Scan(id, this)); }
+    const Page* NewestNext() const { return unpack<NextScanResult>(Scan(id, this)).older; }
     //! Returns the oldest page with the specified ID
-    static const Page* OldestFirst(ID id) { return (const Page*)RES_PAIR_SECOND(Scan(id)); }
+    static const Page* OldestFirst(ID id) { return unpack<FirstScanResult>(Scan(id)).oldest; }
     //! Returns the next newer page with the same ID
-    const Page* OldestNext() const { return (const Page*)RES_PAIR_SECOND(Scan(id, this)); }
+    const Page* OldestNext() const { return unpack<NextScanResult>(Scan(id, this)).newer; }
     //! Returns the oldest and newest page with the specified ID
-    static void Scan(ID id, const Page*& oldest, const Page*& newest) { auto res = Scan(id); newest = (const Page*)RES_PAIR_FIRST(res); oldest = (const Page*)RES_PAIR_SECOND(res); }
+    static void Scan(ID id, const Page*& oldest, const Page*& newest) { auto res = unpack<FirstScanResult>(Scan(id)); newest = res.newest; oldest = res.oldest; }
     //! Returns the next older and newer page with the same ID
-    void Scan(const Page*& older, const Page*& newer) const { auto res = Scan(id, this); newer = (const Page*)RES_PAIR_FIRST(res); older = (const Page*)RES_PAIR_SECOND(res); }
+    void Scan(const Page*& older, const Page*& newer) const { auto res = unpack<NextScanResult>(Scan(id, this)); newer = res.newer; older = res.older; }
 
     //! Returns the first record on a page with the specified ID and optional matching first word in no particular order
     static Span FindUnorderedFirst(ID page, uint32_t firstWord = 0) { return FindUnorderedFirstImpl(page, firstWord); }
@@ -209,33 +209,45 @@ private:
     static const Page* OldestNextImpl(const Page* after);
     static const Page* NewestNextImpl(const Page* after);
 
+    struct FirstScanResult
+    {
+        const Page* newest;
+        const Page* oldest;
+    };
+
+    struct NextScanResult
+    {
+        const Page* older;
+        const Page* newer;
+    };
+
     //! Scans the pages with the specified ID, returning a pair of (Newest, Oldest) page
-    static RES_PAIR_DECL(Scan, ID id);
+    static Packed<FirstScanResult> Scan(ID id);
     //! Scans the pages with the specified ID, returning a pair of (Older, Newer) page relative to the specified page
-    static RES_PAIR_DECL(Scan, ID id, const Page* p);
+    static Packed<NextScanResult> Scan(ID id, const Page* p);
     //! Helper for fast page enumeration, looks for the next page with the specified ID
     static const Page* FastEnum(const nvram::Block* b, const Page* p, ID id);
 
-    static RES_PAIR_DECL(FindUnorderedFirstImpl, ID pageId, uint32_t firstWord);
-    static RES_PAIR_DECL(FindUnorderedNextImpl, const uint8_t* rec, uint32_t firstWord);
-    static RES_PAIR_DECL(FindForwardNextImpl, const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (*nextPage)(const Page*));
-    static RES_PAIR_DECL(FindNewestFirstImpl, ID page, uint32_t firstWord);
-    static RES_PAIR_DECL(FindNewestNextImpl, const uint8_t* stop, uint32_t firstWord);
-    static RES_PAIR_DECL(FindNewestNextImpl, const Page* p, const uint8_t* stop, uint32_t firstWord, const Page* (*nextPage)(const Page*));
-    static RES_PAIR_DECL(FindOldestFirstImpl, ID pageId, uint32_t firstWord);
-    static RES_PAIR_DECL(FindOldestNextImpl, const uint8_t* rec, uint32_t firstWord);
-    static RES_PAIR_DECL(FirstRecordImpl, const Page* p);
-    static RES_PAIR_DECL(LastRecordImpl, const Page* p);
-    static RES_PAIR_DECL(NextRecordImpl, const uint8_t* rec);
+    static Span::packed_t FindUnorderedFirstImpl(ID pageId, uint32_t firstWord);
+    static Span::packed_t FindUnorderedNextImpl(const uint8_t* rec, uint32_t firstWord);
+    static Span::packed_t FindForwardNextImpl(const Page* p, const uint8_t* rec, uint32_t firstWord, const Page* (*nextPage)(const Page*));
+    static Span::packed_t FindNewestFirstImpl(ID page, uint32_t firstWord);
+    static Span::packed_t FindNewestNextImpl(const uint8_t* stop, uint32_t firstWord);
+    static Span::packed_t FindNewestNextImpl(const Page* p, const uint8_t* stop, uint32_t firstWord, const Page* (*nextPage)(const Page*));
+    static Span::packed_t FindOldestFirstImpl(ID pageId, uint32_t firstWord);
+    static Span::packed_t FindOldestNextImpl(const uint8_t* rec, uint32_t firstWord);
+    static Span::packed_t FirstRecordImpl(const Page* p);
+    static Span::packed_t LastRecordImpl(const Page* p);
+    static Span::packed_t NextRecordImpl(const uint8_t* rec);
 
-    static RES_PAIR_DECL(AddFixedImpl, ID page, Span data);
-    static RES_PAIR_DECL(AddFixedImpl, ID page, uint32_t firstWord, Span data);
-    static RES_PAIR_DECL(AddVarImpl, ID page, Span data);
-    static RES_PAIR_DECL(AddVarImpl, ID page, uint32_t firstWord, Span data);
-    static RES_PAIR_DECL(ReplaceFixedImpl, ID page, Span data);
-    static RES_PAIR_DECL(ReplaceFixedImpl, ID page, uint32_t firstWord, Span data);
-    static RES_PAIR_DECL(ReplaceVarImpl, ID page, Span data);
-    static RES_PAIR_DECL(ReplaceVarImpl, ID page, uint32_t firstWord, Span data);
+    static Span::packed_t AddFixedImpl(ID page, Span data);
+    static Span::packed_t AddFixedImpl(ID page, uint32_t firstWord, Span data);
+    static Span::packed_t AddVarImpl(ID page, Span data);
+    static Span::packed_t AddVarImpl(ID page, uint32_t firstWord, Span data);
+    static Span::packed_t ReplaceFixedImpl(ID page, Span data);
+    static Span::packed_t ReplaceFixedImpl(ID page, uint32_t firstWord, Span data);
+    static Span::packed_t ReplaceVarImpl(ID page, Span data);
+    static Span::packed_t ReplaceVarImpl(ID page, uint32_t firstWord, Span data);
 
     //! Pointer to the start of free space on this page, or NULL if no free space is left
     const uint8_t* FindFree() const;
@@ -259,8 +271,8 @@ private:
             : length(uint16_t(length)), var(var) {}
     };
 
-    static RES_PAIR_DECL(AddImpl, ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
-    static RES_PAIR_DECL(ReplaceImpl, ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
+    static Span::packed_t AddImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
+    static Span::packed_t ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
 
     static constexpr uint32_t VarGetLen(const void* rec) { return ((const uint32_t*)rec)[-1]; }
     static constexpr uint32_t VarSkipLen(uint32_t payloadLen) { return (payloadLen + 7) & ~3; }
@@ -268,7 +280,7 @@ private:
 
     static constexpr uint32_t FirstWord(const void* rec) { return ((const uint32_t*)rec)[0]; }
 
-    static constexpr RES_PAIR_DECL(OffsetPackedData, res_pair_t data, int offset) { return RES_PAIR_FIRST(data) ? RES_PAIR(RES_PAIR_FIRST(data) + offset, RES_PAIR_SECOND(data) - offset) : data; }
+    static constexpr Span::packed_t OffsetPackedData(Span::packed_t data, int offset) { Span res(data); if (res) { res = Span(res.Pointer() + offset, res.Length() - offset); } return res; }
 
     static RELEASE_ALWAYS_INLINE const Page* FromPtrInline(const void* ptr)
     {

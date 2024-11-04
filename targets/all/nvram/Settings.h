@@ -110,9 +110,9 @@ private:
     bool notify = false;
     Span value;
 
-    RES_PAIR_DECL(GetImpl);
-    RES_PAIR_DECL(SetImpl, Span value);
-    RES_PAIR_DECL(Load);
+    Span::packed_t GetImpl();
+    Span::packed_t SetImpl(Span value);
+    Span::packed_t Load();
 
     friend class Settings;
 };
