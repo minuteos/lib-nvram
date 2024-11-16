@@ -320,5 +320,49 @@ TEST_CASE("06 VariableUniqueKeyStorage")
     AssertEqual(span.Pointer(), storage.Get(1).Pointer());
 };
 
+TEST_CASE("07 Corrupted Fixed Storage")
+{
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
+
+    struct Test { uint32_t a, b; };
+    FixedStorage<Test> storage("TEST");
+
+    auto t = storage.Add({ 1, 2 });
+    AssertEqual(Span(Test { 1, 2 }), Span(*t));
+    auto t2 = storage.Add({ 3, 4 });
+    AssertEqual(Span(Test { 3, 4 }), Span(*t2));
+    // verify the records get placed one after another
+    AssertEqual(t + 1, t2);
+
+    // intentionally corrupt the space where next record would go
+    Flash::Write((const uint32_t*)(t2 + 1) + 1, BYTES(42));
+
+    auto t3 = storage.Add({ 5, 6 });
+    AssertEqual(Span(Test { 5, 6 }), Span(*t3));
+    AssertNotEqual(t2 + 1, t3);
+};
+
+TEST_CASE("08 Corrupted Variable Storage")
+{
+    nvram::Initialize(Span(), nvram::InitFlags::Reset);
+
+    VariableStorage storage("TEST");
+
+    auto t = storage.Add(WORDS(1));
+    AssertEqual(Span(WORDS(1)), t);
+    auto t2 = storage.Add(WORDS(2));
+    AssertEqual(Span(WORDS(2)), t2);
+
+    // calculate where the next record should go
+    auto next = t2.Pointer() + (t2.Pointer() - t.Pointer());
+
+    // intentionally corrupt the space where next record would go
+    Flash::Write(next, BYTES(42));
+
+    auto t3 = storage.Add(WORDS(3));
+    AssertEqual(Span(WORDS(3)), t3);
+    AssertNotEqual(next, t3);
+};
+
 }
 

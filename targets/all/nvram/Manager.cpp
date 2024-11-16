@@ -97,8 +97,12 @@ bool Manager::Initialize(Span area, InitFlags flags)
 
                 // mark it for erasure
                 MYDBG("ERROR - Failed to complete block initialization @ %08X", blk);
+#if NVRAM_FLASH_DOUBLE_WRITE
+                Flash::ShredDouble(&blk->magic);
+#else
                 Flash::ShredWord(&blk->generation);
                 Flash::ShredWord(&blk->magic);
+#endif
             }
             else
             {
@@ -108,8 +112,7 @@ bool Manager::Initialize(Span area, InitFlags flags)
                 {
                     // mark a block with only erasable pages as erasable
                     MYDBG("WARNING - Block with no used nor free pages found after reset @ %08X", blk);
-                    Flash::ShredWord(&blk->magic);
-                    blocksToErase = true;
+                    EraseBlock(blk);
                 }
                 else
                 {
@@ -136,8 +139,12 @@ bool Manager::Initialize(Span area, InitFlags flags)
         {
             // unless marked erasable, there is something wrong with the block (e.g. interrupted erase operation)
             MYDBG("WARNING - Corrupted block @ %08X", blk);
+#if NVRAM_FLASH_DOUBLE_WRITE
+            Flash::ShredDouble(&blk->magic);
+#else
             Flash::ShredWord(&blk->generation);
             Flash::ShredWord(&blk->magic);
+#endif
             blocksToErase = true;
         }
     }
@@ -233,8 +240,12 @@ const Page* Manager::NewPage(ID id, uint32_t recordSize)
         }
 
         // try to prepare a page
+#if NVRAM_FLASH_DOUBLE_WRITE
+        if (Flash::WriteDouble((const uint32_t*)&free->id, id, w0))
+#else
         if (Flash::WriteWord(&free->sequence, w0) &&
             Flash::WriteWord((const uint32_t*)&free->id, id))
+#endif
         {
             if (recordSize)
             {
@@ -254,7 +265,7 @@ const Page* Manager::NewPage(ID id, uint32_t recordSize)
         }
 
         // mark the page as bad
-        Flash::ShredWord(free);
+        _ShredWordOrDouble(free);
         MYDBG("ERROR - Failed to format page %.4s-%d @ %08X", &id, seq, free);
 
         for (free++; free != free->Block()->end(); free++)
@@ -265,7 +276,7 @@ const Page* Manager::NewPage(ID id, uint32_t recordSize)
             if (free->id == ~0u)
             {
                 MYDBG("Marking corrupted page @ %08X", free);
-                Flash::ShredWord(free);
+                _ShredWordOrDouble(free);
             }
         }
 
@@ -286,7 +297,7 @@ const Page* Manager::NewPage(ID id, uint32_t recordSize)
                         {
                             // mark the page as bad
                             MYDBG("Marking corrupted page @ %08X", p);
-                            Flash::ShredWord(&p);
+                            _ShredWordOrDouble(&p);
                         }
                         else
                         {
@@ -414,7 +425,19 @@ async_def(const Block* block; uint32_t gen)
     {
         if (f.block->IsErasable())
         {
+#if NVRAM_FLASH_DOUBLE_WRITE
+            if (BlockPadding)
+            {
+                auto pb = (const Block*)f.block->padding;
+                f.gen = pb->magic == Block::Magic ? pb->generation : 0;
+            }
+            else
+            {
+                f.gen = 0;
+            }
+#else
             f.gen = f.block->generation;
+#endif
 
             for (;;)
             {
@@ -437,8 +460,12 @@ async_def(const Block* block; uint32_t gen)
             }
 
             // something has gone wrong, mark block for another erasure attempt
+#if NVRAM_FLASH_DOUBLE_WRITE
+            Flash::ShredDouble(&f.block->magic);
+#else
             Flash::ShredWord(&f.block->generation);
             Flash::ShredWord(&f.block->magic);
+#endif
         }
     }
 
@@ -538,15 +565,33 @@ size_t Manager::EraseAll(ID id)
 
 void Manager::ErasePage(const Page* page)
 {
-    Flash::ShredWord(&page->id);
+    _ShredWordOrDouble(&page->id);
 
     // mark the entire block erasable if it contains only erasable pages
     auto* b = page->Block();
     if (page->Block()->CheckPages().flags == Block::PagesErasable)
     {
-        Flash::ShredWord(&b->magic);
-        blocksToErase = true;
+        EraseBlock(b);
     }
+}
+
+void Manager::EraseBlock(const Block* block)
+{
+#if NVRAM_FLASH_DOUBLE_WRITE
+    if (BlockPadding)
+    {
+        // copy header to padding to preserve generation numbering
+        Flash::WriteDouble(block->padding, block->magic, block->generation);
+    }
+    else
+    {
+        MYDBG("WARNING - losing block generation number because there is no padding available to preserve it, consider alternate layout");
+    }
+    Flash::ShredDouble(&block->magic);
+#else
+    Flash::ShredWord(&block->magic);
+#endif
+    blocksToErase = true;
 }
 
 }

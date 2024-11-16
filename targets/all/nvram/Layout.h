@@ -40,8 +40,19 @@ constexpr size_t PagesKeptFree = NVRAM_PAGES_KEPT_FREE;
 constexpr size_t PagesKeptFree = 4;
 #endif
 
+#if NVRAM_FLASH_DOUBLE_WRITE
+//! Write alignment
+constexpr size_t WriteAlignment = 8;
+#else
+//! Write alignment
+constexpr size_t WriteAlignment = 4;
+#endif
+
+//! Align size
+constexpr size_t RequiredAligned(size_t size) { return (size + WriteAlignment - 1) & ~(WriteAlignment - 1); }
+
 //! Size of individual pages
-constexpr size_t PageSize = (BlockSize - BlockHeader) / PagesPerBlock & ~(sizeof(uintptr_t) - 1);
+constexpr size_t PageSize = (BlockSize - BlockHeader) / PagesPerBlock & ~(WriteAlignment - 1);
 
 //! Page header length
 constexpr size_t PageHeader = 8;
@@ -51,5 +62,11 @@ constexpr size_t PagePayload = PageSize - PageHeader;
 
 //! Padding at the end of the block
 constexpr size_t BlockPadding = BlockSize - BlockHeader - PagesPerBlock * PageSize;
+
+#if NVRAM_FLASH_DOUBLE_WRITE
+inline void _ShredWordOrDouble(const void* ptr) { Flash::ShredDouble(ptr); }
+#else
+inline void _ShredWordOrDouble(const void* ptr) { Flash::ShredWord(ptr); }
+#endif
 
 }

@@ -119,7 +119,7 @@ Span::packed_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData
 
     bool var = totalLengthAndFlags.var;
     uint32_t totalLength = totalLengthAndFlags.length;
-    uint32_t requiredLength = (totalLength + 3) & ~3;
+    uint32_t requiredLength = RequiredAligned(totalLength);
 
     ASSERT(totalLength);
 
@@ -137,35 +137,17 @@ Span::packed_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData
             free = p->data + var * 4;
         }
 
-        if (!p->recordSize)
+        auto res = Span(WriteImpl(free, firstWord, restOfData, totalLength));
+        if (res)
         {
-            // variable records - first reserve space by writing the record length
-            if (!Flash::WriteWord(free - 4, totalLength))
+            if (!totalLengthAndFlags.noNotify)
             {
-                MYDBG("Failed to write length for var record @ %08X", free - 4);
-                Flash::ShredWord(free - 4);
-                free += 4;	// we can try starting at the next word - since the length is now zero, it will be simply walked over
-                continue;
+                _manager.Notify(page);
             }
+            return res;
         }
 
-        // the rest is written the same for both record types, with first word written last
-        if (totalLength <= 4 || Flash::Write(free + 4, Span(restOfData, totalLength - 4)))
-        {
-            if (Flash::WriteWord(free, firstWord))
-            {
-                if (!totalLengthAndFlags.noNotify)
-                {
-                    _manager.Notify(page);
-                }
-                return Span(free, totalLength);
-            }
-        }
-
-        MYDBG("Failed to write record @ %08X", free);
-        Flash::ShredWord(free);
-
-        free += p->recordSize ? p->recordSize : VarSkipLen(totalLength);
+        free = NULL;
     }
 }
 
@@ -200,7 +182,7 @@ Span::packed_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOf
         }
 
         MYDBG("Deleting older: %08X", del);
-        Flash::ShredWord(del);
+        ShredRecord(del);
     }
 
     uint32_t len = totalLengthAndFlags.length;
@@ -220,13 +202,196 @@ Span::packed_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOf
     if (res)
     {
         // delete the previous record if the new one has been written successfully
-        Flash::ShredWord(rec);
+        ShredRecord(rec);
     }
 
     _manager.Notify(page);
 
     return res;
 }
+
+/*!
+ * Tries to write the record, starting at the specified location
+ *
+ * Returns the Span of the new record on success or an empty Span if the record
+ * couldn't be written anywhere until the end of the page
+ */
+Span::packed_t Page::WriteImpl(const uint8_t* free, uint32_t firstWord, const void* restOfData, size_t totalLength)
+{
+    const Page* p = FromPtrInline(free);
+
+    for (;;)
+    {
+#if NVRAM_FLASH_DOUBLE_WRITE
+        if (p->recordSize)
+        {
+            // record size is already validated, just make sure there is still enough free space
+            if (free + p->recordSize > endof(p->data))
+            {
+                return {};
+            }
+
+            // make sure the target span is free from unfinished writes
+            if (Span(free, RequiredAligned(totalLength)).IsAllOnes())
+            {
+                // start by writing everything but the first doubleword
+                if (totalLength <= 8 || Flash::Write(free + 8, Span((const uint8_t*)restOfData + 4, totalLength - 8)))
+                {
+                    // write first doubleword last
+                    if (Flash::WriteDouble(free, firstWord, *(const uint32_t*)restOfData))
+                    {
+                        // success
+                        return Span(free, totalLength);
+                    }
+                }
+            }
+
+            // failed, just shred the first dword to skip over the corrupted record
+            MYDBG("Failed to write fixed record @ %08X", free);
+            Flash::ShredDouble(free);
+            free += p->recordSize;
+        }
+        else
+        {
+            auto end = free - 4 + RequiredAligned(totalLength + 4);
+
+            if (end > endof(p->data))
+            {
+                // record won't fit
+                return {};
+            }
+
+            // With doublewords, we cannot start by reserving the length first to avoid having
+            // a valid looking but unfinished record in case of power loss, so we just write the payload first
+            // this also means we need to make sure there are no accidental unfinished writes in the target
+            // span before writing
+            // also verify the next word, if it doesn't reach the end of the page, to make sure we don't
+            // create a record that makes corrupted data accessible
+            if (end < endof(p->data))
+            {
+                end += 8;
+            }
+
+            while (end > free && ((const uint64_t*)end)[-1] + 1 == 0)
+            {
+                end -= 8;
+            }
+
+            if (end > free)
+            {
+                MYDBG("Failed to write variable record @ %08X, found garbage @ %08X: %8H", free, end - 8, Span(end - 8, 8));
+
+                // shred the garbage and continue after that
+                auto newFree = end + 4;
+                while (end > free)
+                {
+                    Flash::ShredDouble(end - 8);
+                    end -= 8;
+                }
+
+                free = newFree;
+                continue;
+            }
+
+            if (totalLength <= 4 || Flash::Write(free + 4, Span(restOfData, totalLength - 4)))
+            {
+                // write first doubleword
+                if (Flash::WriteDouble(free - 4, totalLength, firstWord))
+                {
+                    // success
+                    return Span(free, totalLength);
+                }
+            }
+
+            // simply retry - any garbage will be detected and repaired
+            MYDBG("Failed to write variable record @ %08X", free);
+        }
+#else
+        if (p->recordSize)
+        {
+            // record size is already validated, just make sure there is still enough free space
+            if (free + p->recordSize > endof(p->data))
+            {
+                return {};
+            }
+        }
+        else
+        {
+            uint32_t requiredLength = RequiredAligned(totalLength);
+
+            for (;;)
+            {
+                if (free + requiredLength > endof(p->data))
+                {
+                    return {};
+                }
+
+                // variable records - first reserve space by writing the record length
+                if (Flash::WriteWord(free - 4, totalLength))
+                {
+                    break;
+                }
+
+                MYDBG("Failed to write length for var record @ %08X", free - 4);
+                Flash::ShredWord(free - 4);
+                free += 4;	// we can try starting at the next word - since the length is now zero, it will be simply walked over
+            }
+        }
+
+        // the rest is written the same for both record types, with first word written last
+        if (totalLength <= 4 || Flash::Write(free + 4, Span(restOfData, totalLength - 4)))
+        {
+            if (Flash::WriteWord(free, firstWord))
+            {
+                // success - return the span of the written record
+                return Span(free, totalLength);
+            }
+        }
+
+        MYDBG("Failed to write record @ %08X", free);
+        ShredRecord(free);
+        free += p->recordSize ? p->recordSize : VarSkipLen(totalLength);
+#endif
+    }
+}
+
+#if NVRAM_FLASH_DOUBLE_WRITE
+
+void Page::ShredRecord(const void* ptr)
+{
+    const Page* p = FromPtrInline(ptr);
+
+    if (p->recordSize)
+    {
+        // easy for fixed records
+        Flash::ShredDouble(ptr);
+        return;
+    }
+
+    // for variable records, shredding a record will be hopefully performed without
+    // interruption - if it is interrupted, the record may still appear valid
+    // but it can be partially shredded from the end
+    // this is still better than starting from the beginning, which would
+    // corrupt the record continuity (shredding the first dword would make the
+    // payload of the record be treated as the header of the next record)
+    uint32_t totalLength = VarGetLen(ptr);
+    ASSERT(totalLength != 0 && totalLength != ~0u);
+    auto start = (const uint8_t*)ptr - 4;
+    auto end = start + VarSkipLen(totalLength);
+    if (end > endof(p->data))
+    {
+        // if the record was corrupted, just erase the rest of page...
+        MYDBG("Erasing the rest of corrupted page from %p", start);
+        end = endof(p->data);
+    }
+
+    for (auto shred = end - 8; shred >= start; shred -= 8)
+    {
+        Flash::ShredDouble(shred);
+    }
+}
+
+#endif
 
 /*!
  * Deletes all records with the specified key (i.e. firstWords)
@@ -245,7 +410,7 @@ bool Page::Delete(ID page, uint32_t firstWord)
     do
     {
         MYDBG("Deleting record: %08X", rec.Pointer());
-        Flash::ShredWord(rec);
+        ShredRecord(rec);
     } while ((rec = FindUnorderedNext(rec, firstWord)));
 
     _manager.Notify(page);
@@ -288,13 +453,13 @@ bool Page::MoveRecords(const Page* p, size_t limit) const
         }
         else
         {
-            uint32_t requiredLength = (rec.Length() + 3) & ~3;
-            if (testFree + requiredLength > freeMax)
+            uint32_t requiredLength = RequiredAligned(rec.Length() + 4);
+            if (testFree - 4 + requiredLength > freeMax)
             {
                 return false;
             }
             // include the space for the length of the next record
-            testFree += 4 + requiredLength;
+            testFree += requiredLength;
         }
     }
 
@@ -304,59 +469,24 @@ bool Page::MoveRecords(const Page* p, size_t limit) const
 
     for (Span rec = FindForwardNextImpl(this, NULL, 0, NULL); rec; rec = FindForwardNextImpl(this, rec, 0, NULL))
     {
-        for (;;)
+        // free can point past the end of data if the last moved record filled the page exactly to the end
+        if (free < endof(p->data))
         {
-            if (p->recordSize)
+            auto span = Span(WriteImpl(free, rec.Element<uint32_t>(), rec.Pointer() + 4, rec.Length()));
+
+            if (span)
             {
-                // record size is already validated, just make sure there is still enough free space
-                if (free + p->recordSize > endof(p->data))
-                {
-                    success = false;
-                    goto end;
-                }
+                // successful write
+                ShredRecord(rec);
+                free = span.Pointer<uint8_t>() + (p->recordSize ? p->recordSize : VarSkipLen(rec.Length()));
+                continue;
             }
-            else
-            {
-                uint32_t requiredLength = (rec.Length() + 3) & ~3;
-
-                for (;;)
-                {
-                    if (free + requiredLength > endof(p->data))
-                    {
-                        success = false;
-                        goto end;
-                    }
-
-                    // variable records - first reserve space by writing the record length
-                    if (Flash::WriteWord(free - 4, rec.Length()))
-                    {
-                        break;
-                    }
-
-                    MYDBG("Failed to write length for var record @ %08X", free - 4);
-                    Flash::ShredWord(free - 4);
-                    free += 4;	// we can try starting at the next word - since the length is now zero, it will be simply walked over
-                }
-            }
-
-            // the rest is written the same for both record types, with first word written last
-            if (rec.Length() <= 4 || Flash::Write(free + 4, rec.RemoveLeft(4)))
-            {
-                if (Flash::WriteWord(free, rec.Element<uint32_t>()))
-                {
-                    moved++;
-                    Flash::ShredWord(rec);
-                    free += p->recordSize ? p->recordSize : VarSkipLen(rec.Length());
-                    break;
-                }
-            }
-
-            MYDBG("Failed to write record @ %08X", free);
-            Flash::ShredWord(free);
-            free += p->recordSize ? p->recordSize : VarSkipLen(rec.Length());
         }
+
+        success = false;
+        break;
     }
-end:
+
     if (moved)
     {
         MYDBG("Moved %d records from page %.4s-%d @ %08X to page %.4s-%d @ %08X", moved,

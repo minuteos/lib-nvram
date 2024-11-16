@@ -29,7 +29,7 @@ TEST_CASE("02 Block Alloc")
     auto blk = Block::New();
 
     AssertNotEqual((const Block*)NULL, blk);
-    AssertEqual(1, UsedBlocks().size());
+    AssertEqual(1u, UsedBlocks().size());
     AssertEqual(blk, UsedBlocks().begin());
 }
 

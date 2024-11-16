@@ -45,11 +45,36 @@ bool Flash::Write(const void* ptr, Span data)
     for (char ch: data)
         *p++ &= ch;
     flash.Protect();
-    return true;
+    return data == Span(ptr, data.Length());
 }
+
+#if NVRAM_FLASH_DOUBLE_WRITE
+
+void Flash::ShredDouble(const void* ptr)
+{
+    ASSERT(!(uintptr_t(ptr) & 7));
+    auto p = (uint32_t*)ptr;
+    flash.Unprotect();
+    p[0] = p[1] = 0;
+    flash.Protect();
+}
+
+bool Flash::WriteDouble(const void* ptr, uint32_t lo, uint32_t hi)
+{
+    ASSERT(!(uintptr_t(ptr) & 7));
+    auto p = (uint32_t*)ptr;
+    flash.Unprotect();
+    p[0] &= lo;
+    p[1] &= hi;
+    flash.Protect();
+    return p[0] == lo && p[1] == hi;
+}
+
+#else
 
 void Flash::ShredWord(const void* ptr)
 {
+    ASSERT(!(uintptr_t(ptr) & 3));
     flash.Unprotect();
     *(uint32_t*)ptr = 0;
     flash.Protect();
@@ -57,11 +82,14 @@ void Flash::ShredWord(const void* ptr)
 
 bool Flash::WriteWord(const void* ptr, uint32_t word)
 {
+    ASSERT(!(uintptr_t(ptr) & 3));
     flash.Unprotect();
     *(uint32_t*)ptr &= word;
     flash.Protect();
     return *(uint32_t*)ptr == word;
 }
+
+#endif
 
 bool Flash::Erase(Span range)
 {

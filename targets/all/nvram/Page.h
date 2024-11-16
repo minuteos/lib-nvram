@@ -273,9 +273,10 @@ private:
 
     static Span::packed_t AddImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
     static Span::packed_t ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags);
+    static Span::packed_t WriteImpl(const uint8_t* free, uint32_t firstWord, const void* restOfData, size_t totalLength);
 
     static constexpr uint32_t VarGetLen(const void* rec) { return ((const uint32_t*)rec)[-1]; }
-    static constexpr uint32_t VarSkipLen(uint32_t payloadLen) { return (payloadLen + 7) & ~3; }
+    static constexpr uint32_t VarSkipLen(uint32_t payloadLen) { return RequiredAligned(payloadLen + 4); }
     static constexpr const uint8_t* VarNext(const void* rec) { return (const uint8_t*)rec + VarSkipLen(VarGetLen(rec)); }
 
     static constexpr uint32_t FirstWord(const void* rec) { return ((const uint32_t*)rec)[0]; }
@@ -288,6 +289,12 @@ private:
         ASSERT(firstPageInBlock > (uintptr_t)_manager.Blocks().begin() && firstPageInBlock < (uintptr_t)_manager.Blocks().end());
         return (const Page*)((uintptr_t)ptr - ((uintptr_t)ptr - firstPageInBlock) % PageSize);
     }
+
+#if NVRAM_FLASH_DOUBLE_WRITE
+    static void ShredRecord(const void* ptr);
+#else
+    static void ShredRecord(const void* ptr) { Flash::ShredWord(ptr); }
+#endif
 
     friend class Manager;
 };

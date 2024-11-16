@@ -29,7 +29,11 @@ TEST_CASE("02 Init Erase Random Data")
 
     for (auto& b: Blocks())
     {
+#if NVRAM_FLASH_DOUBLE_WRITE
+        Flash::WriteDouble(&b, 42, 42);
+#else
         Flash::WriteWord(&b, 42);
+#endif
     }
 
     // let background tasks complete before reinitializing
@@ -63,7 +67,7 @@ TEST_CASE("03 Init Erase Free Blocks")
     {
         for (auto& p: b)
         {
-            Flash::ShredWord(&p);
+            _ShredWordOrDouble(&p);
         }
     }
 

@@ -55,15 +55,23 @@ Packed<Block::CheckResult> Block::CheckPagesImpl() const
 
 bool Block::Format(uint32_t gen) const
 {
+#if NVRAM_FLASH_DOUBLE_WRITE
+    if (Flash::WriteDouble(&magic, Magic, gen))
+#else
     if (Flash::WriteWord(&magic, Magic) &&
         Flash::WriteWord(&generation, gen))
+#endif
     {
         MYDBG("Formatted sector gen %d @ %08X", gen, this);
         return true;
     }
 
+#if NVRAM_FLASH_DOUBLE_WRITE
+    Flash::ShredDouble(&magic);
+#else
     Flash::ShredWord(&generation);
     Flash::ShredWord(&magic);
+#endif
     MYDBG("ERROR - Failed to format sector gen %d @ %08X", gen, this);
     return false;
 }

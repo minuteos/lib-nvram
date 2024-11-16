@@ -110,6 +110,8 @@ private:
     async(EraseBlocks);
     //! Marks a page (and, if possible, the block that holds it) for erasure
     void ErasePage(const Page* page);
+    //! Marks a block for erasure
+    void EraseBlock(const Block* block);
 };
 
 extern Manager _manager;

@@ -35,8 +35,13 @@ public:
     static Span GetRange();
 
     static bool Write(const void* ptr, Span data);
+#if NVRAM_FLASH_DOUBLE_WRITE
+    static bool WriteDouble(const void* ptr, uint32_t lo, uint32_t hi);
+    static void ShredDouble(const void* ptr);
+#else
     static bool WriteWord(const void* ptr, uint32_t word);
     static void ShredWord(const void* ptr);
+#endif
     static bool Erase(Span range);
 
     static async(ErasePageAsync, const void* ptr);
