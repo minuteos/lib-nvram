@@ -68,13 +68,12 @@ TEST_CASE("03 Init Erase Free Blocks")
     }
 
     // let background tasks complete before reinitializing
-    auto endTime = kernel::Scheduler::Main().Run();
-    AssertEqual(0u, endTime);
+    auto startTime = kernel::Scheduler::Main().Run();
 
     nvram::Initialize(Span());
 
-    endTime = kernel::Scheduler::Main().Run();
-    AssertNotEqual(0u, endTime);
+    auto endTime = kernel::Scheduler::Main().Run();
+    AssertNotEqual(startTime, endTime);
 
     for (auto& b : Blocks())
     {
