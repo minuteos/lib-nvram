@@ -84,11 +84,13 @@ Span::packed_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint
 
             uint32_t len, first;
 
-            for (; rec < pe; rec += VarSkipLen(len))
+            while (rec < pe)
             {
                 len = VarGetLen(rec);
                 if (len == 0)
                 {
+                    // quickly skip over a range of zeroes
+                    rec += WriteAlignment;
                     continue;
                 }
                 else if (len != ~0u && (first = FirstWord(rec)) != 0)
@@ -98,6 +100,7 @@ Span::packed_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint
                         return Span(rec, len);
                     }
                 }
+                rec += VarSkipLen(len);
             }
         }
 
