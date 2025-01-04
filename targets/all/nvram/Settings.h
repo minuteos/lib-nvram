@@ -53,11 +53,11 @@ class SettingSpec
 {
 public:
     constexpr SettingSpec(Settings& owner, ID id, const char* name, Span defaultValue)
-        : owner(owner), id(id),
+        : owner(owner), id(id), defaultValue(defaultValue)
 #if TRACE
-        name(name),
+        , name(name)
 #endif
-        defaultValue(defaultValue) {}
+        {}
 
     Settings& Owner() const { return owner; }
     ID GetID() const { return id; }
@@ -75,10 +75,10 @@ public:
 private:
     Settings& owner;
     ID id;
+    Span defaultValue;
 #if TRACE
     const char* name;
 #endif
-    Span defaultValue;
 };
 
 template<typename T> class TypedSettingSpec : public SettingSpec
