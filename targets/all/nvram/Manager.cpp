@@ -17,6 +17,7 @@
 namespace nvram
 {
 
+INIT_PRIORITY(-9100)
 Manager _manager;
 
 /*!

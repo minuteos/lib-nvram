@@ -145,12 +145,12 @@ public:
 #define SETTING_GROUP(group, id) \
     __attribute__((section(".rospec.nvs." #group ".tbl"))) const nvram::SettingPtr _nvs_ ## group ## _tbl[] = {}; \
     __attribute__((section(".rospec.nvs." #group ".tbl1"))) const nvram::SettingPtr _nvs_ ## group ## _tbl1[] = {}; \
-    nvram::Settings group(id, _nvs_ ## group ## _tbl, _nvs_ ## group ## _tbl1);
+    INIT_PRIORITY(-9000) nvram::Settings group(id, _nvs_ ## group ## _tbl, _nvs_ ## group ## _tbl1);
 
 #define SETTING(group, symbol, type, name, ...) \
     __attribute__((section(".rospec.nvs." #group ".def." name))) static const type _nvs_ ## group ## _def_ ## symbol = type(__VA_ARGS__); \
     __attribute__((section(".rospec.nvs." #group ".spec." name))) static const nvram::TypedSettingSpec<type> _nvs_ ## group ## _spec_ ## symbol(group, ID::FNV1a(name), name, _nvs_ ## group ## _def_ ## symbol); \
-    nvram::TypedSetting<type> symbol(_nvs_ ## group ## _spec_ ## symbol); \
+    INIT_PRIORITY(-9000) nvram::TypedSetting<type> symbol(_nvs_ ## group ## _spec_ ## symbol); \
     __attribute__((section(".rospec.nvs." #group ".tbl." name))) const nvram::Setting* _nvs_ ## group ## _ptr_ ## symbol = &symbol;
 
 #else
