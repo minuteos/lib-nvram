@@ -10,6 +10,14 @@
 
 #include <nvram/nvram.h>
 
+#ifndef NVRAM_SETTINGS_NAMES
+#if TRACE
+#define NVRAM_SETTINGS_NAMES    1
+#else
+#define NVRAM_SETTINGS_NAMES    0
+#endif
+#endif
+
 namespace nvram
 {
 
@@ -54,14 +62,14 @@ class SettingSpec
 public:
     constexpr SettingSpec(Settings& owner, ID id, const char* name, Span defaultValue)
         : owner(owner), id(id), defaultValue(defaultValue)
-#if TRACE
+#if NVRAM_SETTINGS_NAMES
         , name(name)
 #endif
         {}
 
     Settings& Owner() const { return owner; }
     ID GetID() const { return id; }
-#if TRACE
+#if NVRAM_SETTINGS_NAMES
     const char* GetName() const { return name; }
 #else
     const char* GetName() const { return "???"; }
@@ -76,7 +84,7 @@ private:
     Settings& owner;
     ID id;
     Span defaultValue;
-#if TRACE
+#if NVRAM_SETTINGS_NAMES
     const char* name;
 #endif
 };
