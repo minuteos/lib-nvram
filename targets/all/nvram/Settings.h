@@ -26,6 +26,8 @@ class Setting;
 typedef Setting* SettingPtr;
 typedef const SettingPtr* SettingIterator;
 
+template<typename TValue, typename... TExtra> static constexpr TValue&& _ExtractSettingDefault(TValue&& value, TExtra&&... extra) { return std::move(value); }
+
 class Settings
 {
 public:
@@ -60,10 +62,13 @@ private:
 class SettingSpec
 {
 public:
-    constexpr SettingSpec(Settings& owner, ID id, const char* name, Span defaultValue)
+    template<typename... TExtra> constexpr SettingSpec(Settings& owner, ID id, const char* name, Span defaultValue, TExtra&&... extra)
         : owner(owner), id(id), defaultValue(defaultValue)
 #if NVRAM_SETTINGS_NAMES
         , name(name)
+#endif
+#ifdef NVRAM_SETTINGS_EXTRA
+        , extra { extra... }
 #endif
         {}
 
@@ -73,6 +78,9 @@ public:
     const char* GetName() const { return name; }
 #else
     const char* GetName() const { return "???"; }
+#endif
+#ifdef NVRAM_SETTINGS_EXTRA
+    const NVRAM_SETTINGS_EXTRA& Extra() const { return extra; }
 #endif
     Span Get() const { return owner.Get(id); }
     Span Set(Span value) const { return owner.Set(id, value); }
@@ -87,13 +95,16 @@ private:
 #if NVRAM_SETTINGS_NAMES
     const char* name;
 #endif
+#ifdef NVRAM_SETTINGS_EXTRA
+    NVRAM_SETTINGS_EXTRA extra;
+#endif
 };
 
 template<typename T> class TypedSettingSpec : public SettingSpec
 {
 public:
-    constexpr TypedSettingSpec(Settings& owner, ID id, const char* name, const T& defaultValue = {})
-        : SettingSpec(owner, id, name, defaultValue) {}
+    template<typename... TExtra> constexpr TypedSettingSpec(Settings& owner, ID id, const char* name, Span defaultValue, T&& discard, TExtra&&... extra)
+        : SettingSpec(owner, id, name, defaultValue, extra...) {}
 };
 
 class Setting
@@ -104,6 +115,9 @@ public:
 
     ID GetID() const { return spec.GetID(); }
     const char* GetName() const { return spec.GetName(); }
+#ifdef NVRAM_SETTINGS_EXTRA
+    const NVRAM_SETTINGS_EXTRA& Extra() const { return spec.Extra(); }
+#endif
     Span Get() { return GetImpl(); }
     Span GetSpan() { return GetImpl(); }
     Span Set(Span value) { return SetImpl(value); }
@@ -156,8 +170,8 @@ public:
     INIT_PRIORITY(-9000) nvram::Settings group(id, _nvs_ ## group ## _tbl, _nvs_ ## group ## _tbl1);
 
 #define SETTING(group, symbol, type, name, ...) \
-    __attribute__((section(".rospec.nvs." #group ".def." name))) static const type _nvs_ ## group ## _def_ ## symbol = type(__VA_ARGS__); \
-    __attribute__((section(".rospec.nvs." #group ".spec." name))) static const nvram::TypedSettingSpec<type> _nvs_ ## group ## _spec_ ## symbol(group, ID::FNV1a(name), name, _nvs_ ## group ## _def_ ## symbol); \
+    __attribute__((section(".rospec.nvs." #group ".def." name))) static const type _nvs_ ## group ## _def_ ## symbol = nvram::_ExtractSettingDefault<type>(__VA_ARGS__); \
+    __attribute__((section(".rospec.nvs." #group ".spec." name))) static const nvram::TypedSettingSpec<type> _nvs_ ## group ## _spec_ ## symbol(group, ID::FNV1a(name), name, _nvs_ ## group ## _def_ ## symbol, __VA_ARGS__); \
     INIT_PRIORITY(-9000) nvram::TypedSetting<type> symbol(_nvs_ ## group ## _spec_ ## symbol); \
     __attribute__((section(".rospec.nvs." #group ".tbl." name))) const nvram::Setting* _nvs_ ## group ## _ptr_ ## symbol = &symbol;
 
