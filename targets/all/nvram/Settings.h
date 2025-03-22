@@ -26,8 +26,6 @@ class Setting;
 typedef Setting* SettingPtr;
 typedef const SettingPtr* SettingIterator;
 
-template<typename TValue, typename... TExtra> static constexpr TValue&& _ExtractSettingDefault(TValue&& value, TExtra&&... extra) { return std::move(value); }
-
 class Settings
 {
 public:
@@ -103,7 +101,7 @@ private:
 template<typename T> class TypedSettingSpec : public SettingSpec
 {
 public:
-    template<typename... TExtra> constexpr TypedSettingSpec(Settings& owner, ID id, const char* name, Span defaultValue, T&& discard, TExtra&&... extra)
+    template<typename... TExtra> constexpr TypedSettingSpec(Settings& owner, ID id, const char* name, Span defaultValue, TExtra&&... extra)
         : SettingSpec(owner, id, name, defaultValue, extra...) {}
 };
 
@@ -162,6 +160,10 @@ public:
 
 }
 
+#define SETTING(group, symbol, type, name, ...) \
+    SETTING_DEFAULT(group, symbol, type, name, __VA_ARGS__) \
+    SETTING_EX(group, symbol, type, name)
+
 #ifdef NVRAM_SETTING_DEFINITIONS
 
 #define SETTING_GROUP(group, id) \
@@ -169,8 +171,10 @@ public:
     __attribute__((section(".rospec.nvs." #group ".tbl1"))) const nvram::SettingPtr _nvs_ ## group ## _tbl1[] = {}; \
     INIT_PRIORITY(-9000) nvram::Settings group(id, _nvs_ ## group ## _tbl, _nvs_ ## group ## _tbl1);
 
-#define SETTING(group, symbol, type, name, ...) \
-    __attribute__((section(".rospec.nvs." #group ".def." name))) static const type _nvs_ ## group ## _def_ ## symbol = nvram::_ExtractSettingDefault<type>(__VA_ARGS__); \
+#define SETTING_DEFAULT(group, symbol, type, name, ...) \
+    __attribute__((section(".rospec.nvs." #group ".def." name))) static const type _nvs_ ## group ## _def_ ## symbol = __VA_ARGS__;
+
+#define SETTING_EX(group, symbol, type, name, ...) \
     __attribute__((section(".rospec.nvs." #group ".spec." name))) static const nvram::TypedSettingSpec<type> _nvs_ ## group ## _spec_ ## symbol(group, ID::FNV1a(name), name, _nvs_ ## group ## _def_ ## symbol, __VA_ARGS__); \
     INIT_PRIORITY(-9000) nvram::TypedSetting<type> symbol(_nvs_ ## group ## _spec_ ## symbol); \
     __attribute__((section(".rospec.nvs." #group ".tbl." name))) const nvram::Setting* _nvs_ ## group ## _ptr_ ## symbol = &symbol;
@@ -180,7 +184,9 @@ public:
 #define SETTING_GROUP(group, id) \
     extern nvram::Settings group;
 
-#define SETTING(group, symbol, type, name, ...) \
+#define SETTING_EX(group, symbol, type, name, ...) \
     extern nvram::TypedSetting<type> symbol;
+
+#define SETTING_DEFAULT(group, symbol, type, name, ...)
 
 #endif
