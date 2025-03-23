@@ -114,17 +114,17 @@ Span::packed_t Page::FindForwardNextImpl(const Page* p, const uint8_t* rec, uint
 /*!
  * Returns the first valid record on the specified page
  */
-Span::packed_t Page::FirstRecordImpl(const Page* p)
+Span::packed_t Page::FirstRecordImpl(const Page* p, uint32_t firstWord)
 {
-    return FindForwardNextImpl(p, NULL, 0, NULL);
+    return FindForwardNextImpl(p, NULL, firstWord, NULL);
 }
 
 /*!
  * Returns the last valid record on the specified page
  */
-Span::packed_t Page::LastRecordImpl(const Page* p)
+Span::packed_t Page::LastRecordImpl(const Page* p, uint32_t firstWord)
 {
-    return FindNewestNextImpl(p, NULL, 0, NULL);
+    return FindNewestNextImpl(p, NULL, firstWord, NULL);
 }
 
 /*!

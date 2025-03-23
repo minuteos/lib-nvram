@@ -115,9 +115,9 @@ public:
     bool MoveRecords(const Page* newPage, size_t limit) const;
 
     //! Returns the first record on the page
-    Span FirstRecord() const { return FirstRecordImpl(this); }
+    Span FirstRecord(uint32_t firstWord = 0) const { return FirstRecordImpl(this, firstWord); }
     //! Returns the last record on the page
-    Span LastRecord() const { return LastRecordImpl(this); }
+    Span LastRecord(uint32_t firstWord = 0) const { return LastRecordImpl(this, firstWord); }
     //! Returns the full page data span
     Span PageData() const { return data; }
 
@@ -236,8 +236,8 @@ private:
     static Span::packed_t FindNewestNextImpl(const Page* p, const uint8_t* stop, uint32_t firstWord, const Page* (*nextPage)(const Page*));
     static Span::packed_t FindOldestFirstImpl(ID pageId, uint32_t firstWord);
     static Span::packed_t FindOldestNextImpl(const uint8_t* rec, uint32_t firstWord);
-    static Span::packed_t FirstRecordImpl(const Page* p);
-    static Span::packed_t LastRecordImpl(const Page* p);
+    static Span::packed_t FirstRecordImpl(const Page* p, uint32_t firstWord = 0);
+    static Span::packed_t LastRecordImpl(const Page* p, uint32_t firstWord = 0);
     static Span::packed_t NextRecordImpl(const uint8_t* rec);
 
     static Span::packed_t AddFixedImpl(ID page, Span data);
