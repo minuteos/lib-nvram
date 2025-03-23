@@ -60,8 +60,8 @@ private:
 class SettingSpec
 {
 public:
-    template<typename... TExtra> constexpr SettingSpec(Settings& owner, ID id, const char* name, Span defaultValue, TExtra&&... extra)
-        : owner(owner), id(id), defaultValue(defaultValue)
+    template<typename... TExtra> constexpr SettingSpec(Settings& owner, ID id, const char* name, const void* defVal, size_t defLen, TExtra&&... extra)
+        : owner(owner), id(id), defVal(defVal), defLen(defLen)
 #if NVRAM_SETTINGS_NAMES
         , name(name)
 #endif
@@ -83,13 +83,14 @@ public:
     Span Get() const { return owner.Get(id); }
     Span Set(Span value) const { return owner.Set(id, value); }
     bool Delete() const { return owner.Delete(id); }
-    Span DefaultValue() const { return defaultValue; }
-    size_t ValueLength() const { return defaultValue.Length(); }
+    Span DefaultValue() const { return Span(defVal, defLen); }
+    size_t ValueLength() const { return defLen; }
 
-private:
+public:
     Settings& owner;
     ID id;
-    Span defaultValue;
+    const void* defVal;
+    size_t defLen;
 #if NVRAM_SETTINGS_NAMES
     const char* name;
 #endif
@@ -101,8 +102,8 @@ private:
 template<typename T> class TypedSettingSpec : public SettingSpec
 {
 public:
-    template<typename... TExtra> constexpr TypedSettingSpec(Settings& owner, ID id, const char* name, Span defaultValue, TExtra&&... extra)
-        : SettingSpec(owner, id, name, defaultValue, extra...) {}
+    template<typename... TExtra> constexpr TypedSettingSpec(Settings& owner, ID id, const char* name, const void* defVal, size_t defLen, TExtra&&... extra)
+        : SettingSpec(owner, id, name, defVal, defLen, extra...) {}
 };
 
 class Setting
@@ -158,6 +159,18 @@ public:
     operator Span() { return Get(); }
 };
 
+template<typename T> struct SettingDefaultType
+{
+    using t = T;
+    template<typename TVal> static constexpr size_t Size(TVal&& value) { return sizeof(TVal); }
+};
+
+template<> struct SettingDefaultType<Span>
+{
+    using t = const char[];
+    template<size_t n> static constexpr size_t Size(const char (&literal)[n]) { return n - 1; }
+};
+
 }
 
 #define SETTING(group, symbol, type, name, ...) \
@@ -172,10 +185,10 @@ public:
     INIT_PRIORITY(-9000) nvram::Settings group(id, _nvs_ ## group ## _tbl, _nvs_ ## group ## _tbl1);
 
 #define SETTING_DEFAULT(group, symbol, type, name, ...) \
-    __attribute__((section(".rospec.nvs." #group ".def." name))) static const type _nvs_ ## group ## _def_ ## symbol = __VA_ARGS__;
+    __attribute__((section(".rospec.nvs." #group ".def." name))) static const nvram::SettingDefaultType<type>::t _nvs_ ## group ## _def_ ## symbol = __VA_ARGS__;
 
 #define SETTING_EX(group, symbol, type, name, ...) \
-    __attribute__((section(".rospec.nvs." #group ".spec." name))) static const nvram::TypedSettingSpec<type> _nvs_ ## group ## _spec_ ## symbol(group, ID::FNV1a(name), name, _nvs_ ## group ## _def_ ## symbol, __VA_ARGS__); \
+    __attribute__((section(".rospec.nvs." #group ".spec." name))) static const nvram::TypedSettingSpec<type> _nvs_ ## group ## _spec_ ## symbol(group, ID::FNV1a(name), name, &_nvs_ ## group ## _def_ ## symbol, nvram::SettingDefaultType<type>::Size(_nvs_ ## group ## _def_ ## symbol), __VA_ARGS__); \
     INIT_PRIORITY(-9000) nvram::TypedSetting<type> symbol(_nvs_ ## group ## _spec_ ## symbol); \
     __attribute__((section(".rospec.nvs." #group ".tbl." name))) const nvram::Setting* _nvs_ ## group ## _ptr_ ## symbol = &symbol;
 
