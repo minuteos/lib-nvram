@@ -44,6 +44,7 @@ public:
     const SettingPtr* end() const { return last; }
 
     async(VersionChange);
+    bool IsCurrentVersion(uint16_t& version);
 
 private:
     VariableUniqueKeyStorage storage;
@@ -51,7 +52,6 @@ private:
     const SettingPtr* first;
     const SettingPtr* last;
 
-    bool IsCurrentVersion(uint16_t& version);
     bool InitVersionTracking(uint16_t& version);
 
     friend class Setting;
