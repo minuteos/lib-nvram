@@ -73,7 +73,7 @@ Span::packed_t Setting::GetImpl()
 Span::packed_t Setting::Load()
 {
     auto val = spec.Get();
-    if (!val || val.Length() < spec.ValueLength())
+    if (!val)
     {
         val = spec.DefaultValue();
     }
