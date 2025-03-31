@@ -16,6 +16,7 @@
 #include <nvram/Block.h>
 #include <nvram/Storage.h>
 #include <nvram/Manager.h>
+#include <nvram/VersionTracker.h>
 
 namespace nvram
 {
