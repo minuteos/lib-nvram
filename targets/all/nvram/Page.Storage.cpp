@@ -18,6 +18,7 @@ namespace nvram
  */
 const uint8_t* Page::FindFree() const
 {
+    PLATFORM_CRITICAL_SECTION();
     const uint8_t* pe = data + PagePayload;
 
     if (uint32_t recordSize = this->recordSize)
@@ -114,6 +115,7 @@ Span::packed_t Page::ReplaceVarImpl(ID page, uint32_t firstWord, Span data)
  */
 Span::packed_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags)
 {
+    PLATFORM_CRITICAL_SECTION();
     const Page* p = NewestFirst(page);
     const uint8_t* free = p ? p->FindFree() : NULL;
 
@@ -158,6 +160,7 @@ Span::packed_t Page::AddImpl(ID page, uint32_t firstWord, const void* restOfData
  */
 Span::packed_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOfData, LengthAndFlags totalLengthAndFlags)
 {
+    PLATFORM_CRITICAL_SECTION();
     Span rec = FindUnorderedFirst(page, firstWord);
 
     if (!rec)
@@ -218,6 +221,7 @@ Span::packed_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOf
  */
 Span::packed_t Page::WriteImpl(const uint8_t* free, uint32_t firstWord, const void* restOfData, size_t totalLength)
 {
+    PLATFORM_CRITICAL_SECTION();
     const Page* p = FromPtrInline(free);
 
     for (;;)
@@ -359,6 +363,7 @@ Span::packed_t Page::WriteImpl(const uint8_t* free, uint32_t firstWord, const vo
 
 void Page::ShredRecord(const void* ptr)
 {
+    PLATFORM_CRITICAL_SECTION();
     const Page* p = FromPtrInline(ptr);
 
     if (p->recordSize)
@@ -398,6 +403,7 @@ void Page::ShredRecord(const void* ptr)
  */
 bool Page::Delete(ID page, uint32_t firstWord)
 {
+    PLATFORM_CRITICAL_SECTION();
     Span rec = FindUnorderedFirst(page, firstWord);
 
     if (!rec)
@@ -422,6 +428,7 @@ bool Page::Delete(ID page, uint32_t firstWord)
  */
 bool Page::MoveRecords(const Page* p, size_t limit) const
 {
+    PLATFORM_CRITICAL_SECTION();
     ASSERT(p);
     ASSERT(p->id == id);
     const uint8_t* free = p->FindFree();
