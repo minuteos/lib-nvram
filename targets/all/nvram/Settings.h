@@ -146,6 +146,7 @@ public:
 
     const T& Get() { return Setting::Get().template Element<T>(); }
     void Set(const T& value) { Setting::Set(value); }
+    void SetSpan(Span value) { Setting::Set(value); }
 
     operator const T&() { return Get(); }
 };
