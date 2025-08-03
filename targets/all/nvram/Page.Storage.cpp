@@ -195,7 +195,6 @@ Span::packed_t Page::ReplaceImpl(ID page, uint32_t firstWord, const void* restOf
         (len <= 4 || !memcmp(restOfData, rec.Pointer() + 4, len - 4)))
     {
         // the record is the same - if using fixed size records, it might be longer, but we care only about the part that was about to be written
-        MYDBG("Same record already written @ %08X", rec);
         return rec;
     }
 
