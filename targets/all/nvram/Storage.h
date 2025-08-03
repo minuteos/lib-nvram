@@ -66,9 +66,26 @@ struct VariableStorage
     const uint32_t pageId;
 };
 
-//! Helper for NVRAM storage pages with fixed size records identified by 32-bit keys
-template<typename T> struct FixedKeyStorage
+struct KeyStorageHelpers
 {
+    static constexpr const void* PtrToKey(const void* ptr) { return ptr ? (const uint8_t*)ptr - 4 : NULL; }
+    static constexpr const uint32_t KeyFromPtr(const void* ptr) { return ((const uint32_t*)ptr)[-1]; }
+
+    static constexpr Span DataWithoutKey(Span data) { return data ? Span(data.Pointer() + 4, data.Length() - 4) : data; }
+    static constexpr Span DataWithoutKey(Span data, ID& key) { return data ? ({ key = *(const uint32_t*)data; Span(data.Pointer() + 4, data.Length() - 4); }) : data; }
+};
+
+template<typename T> struct FixedKeyStorageHelpers : KeyStorageHelpers
+{
+    static constexpr const T* KeyToPtr(const void* rec) { return rec ? (const T*)((const uint8_t*)rec + 4) : NULL; }
+    static constexpr const T* KeyToPtr(const void* rec, ID& key) { return rec ? ({ key = *(const uint32_t*)rec; (const T*)((const uint8_t*)rec + 4); }) : NULL; }
+};
+
+//! Helper for NVRAM storage pages with fixed size records identified by 32-bit keys
+template<typename T> struct FixedKeyStorage : private FixedKeyStorageHelpers<T>
+{
+    using FixedKeyStorageHelpers<T>::KeyToPtr, FixedKeyStorageHelpers<T>::PtrToKey, FixedKeyStorageHelpers<T>::KeyFromPtr, FixedKeyStorageHelpers<T>::DataWithoutKey;
+
     constexpr FixedKeyStorage(ID pageId = T::PageID) : pageId(pageId) {}
 
     //! Returns the first record with the specified key, in no specific order
@@ -108,16 +125,10 @@ template<typename T> struct FixedKeyStorage
     bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
     const uint32_t pageId;
-
-private:
-    static constexpr const T* KeyToPtr(const void* rec) { return rec ? (const T*)((const uint8_t*)rec + 4) : NULL; }
-    static constexpr const T* KeyToPtr(const void* rec, ID& key) { return rec ? ({ key = *(const uint32_t*)rec; (const T*)((const uint8_t*)rec + 4); }) : NULL; }
-    static constexpr const void* PtrToKey(const T* ptr) { return ptr ? (const uint8_t*)ptr - 4 : NULL; }
-    static constexpr const uint32_t KeyFromPtr(const T* ptr) { return ((const uint32_t*)ptr)[-1]; }
 };
 
 //! Helper for NVRAM storage pages with variable size records identified by 32-bit keys
-struct VariableKeyStorage
+struct VariableKeyStorage : private KeyStorageHelpers
 {
     constexpr VariableKeyStorage(ID pageId) : pageId(pageId) {}
 
@@ -151,21 +162,17 @@ struct VariableKeyStorage
     bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
     const uint32_t pageId;
-
-private:
-    static constexpr Span DataWithoutKey(Span data) { return data ? Span(data.Pointer() + 4, data.Length() - 4) : data; }
-    static constexpr Span DataWithoutKey(Span data, ID& key) { return data ? ({ key = *(const uint32_t*)data; Span(data.Pointer() + 4, data.Length() - 4); }) : data; }
-    static constexpr const void* PtrToKey(const void* ptr) { return ptr ? (const uint8_t*)ptr - 4 : NULL; }
-    static constexpr const uint32_t KeyFromPtr(const void* ptr) { return ((const uint32_t*)ptr)[-1]; }
 };
 
 //! Helper for NVRAM storage pages with fixed size records identified by unique 32-bit keys
-template<typename T> struct FixedUniqueKeyStorage
+template<typename T> struct FixedUniqueKeyStorage : private FixedKeyStorageHelpers<T>
 {
+    using FixedKeyStorageHelpers<T>::KeyToPtr, FixedKeyStorageHelpers<T>::PtrToKey, FixedKeyStorageHelpers<T>::KeyFromPtr, FixedKeyStorageHelpers<T>::DataWithoutKey;
+
     constexpr FixedUniqueKeyStorage(ID pageId = T::PageID) : pageId(pageId) {}
 
     //! Returns the record with the specified key, or NULL if record not found
-    const T* Get(ID key) const { return KeyToPtr(Page::FindUnorderedFirst(pageId, key)); }
+    const T* Get(ID key) const { return FixedUniqueKeyStorage::KeyToPtr(Page::FindUnorderedFirst(pageId, key)); }
     //! Stores the record with the specified key,
     //! returns a pointer to the new record in NVRAM,
     //! or NULL if the record could not be written
@@ -179,12 +186,9 @@ template<typename T> struct FixedUniqueKeyStorage
     bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
     const uint32_t pageId;
-
-private:
-    static constexpr const T* KeyToPtr(const void* rec) { return rec ? (const T*)((const uint8_t*)rec + 4) : NULL; }
 };
 
-struct VariableUniqueKeyStorage
+struct VariableUniqueKeyStorage : private KeyStorageHelpers
 {
     constexpr VariableUniqueKeyStorage(ID pageId) : pageId(pageId) {}
 
@@ -198,10 +202,12 @@ struct VariableUniqueKeyStorage
     //! @returns a boolean indicating whethere at least one record was deleted
     bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
-    const uint32_t pageId;
+    //! Returns the first record and its associated key in no specified order
+    Span EnumerateUnorderedFirst(ID& key) const { return DataWithoutKey(Page::FindUnorderedFirst(pageId), key); }
+    //! Returns the next record and its associated key in no specified order
+    Span EnumerateUnorderedNext(const void* after, ID& key) const { return DataWithoutKey(Page::FindUnorderedNext(PtrToKey(after)), key); }
 
-private:
-    static constexpr Span DataWithoutKey(Span data) { return data ? Span(data.Pointer() + 4, data.Length() - 4) : data; }
+    const uint32_t pageId;
 };
 
 }
