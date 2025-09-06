@@ -185,6 +185,11 @@ template<typename T> struct FixedUniqueKeyStorage : private FixedKeyStorageHelpe
     //! @returns a boolean indicating whethere at least one record was deleted
     bool Delete(ID key) const { return Page::Delete(pageId, key); }
 
+    //! Returns the first record and its associated key in no specified order
+    const T* EnumerateUnorderedFirst(ID& key) const { return DataWithoutKey(Page::FindUnorderedFirst(pageId), key); }
+    //! Returns the next record and its associated key in no specified order
+    const T* EnumerateUnorderedNext(const void* after, ID& key) const { return DataWithoutKey(Page::FindUnorderedNext(PtrToKey(after)), key); }
+
     const uint32_t pageId;
 };
 
